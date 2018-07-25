@@ -1,0 +1,376 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Carl
+{
+    class ChannelEntry
+    {
+        public MixerChannel Channel;
+        public ChatConnector Chat;
+        public DateTime LastFoundTime;
+    }
+
+    public interface ICarl
+    {
+        // Called by the chat connectors when a message has been received.
+        void OnChatMessage(ChatMessage msg);
+
+        // Called by the chat connectors when a user has joined a channel.        
+        void OnUserActivity(UserActivity activity);
+
+        // Called by the firehose and chat connectors when they want to send a message.
+        Task<bool> SendChatMessage(int channelId, string message);
+
+        // Called by the firehose and chat connectors when they want to send a message.
+        Task<bool> SendWhisper(int channelId, string targetUserName, string message);
+    }
+
+    class Carl : ICarl
+    {
+        int m_viewerCountLimit = 5;   // The number of viewers a channel must have (inclusive) to be picked up.
+        int m_workerLimit = 20;
+        int m_workMasterTimeMs = 2000;
+
+        List<int> m_channelOverrides = null; //= new List<int>(){ 153416 };
+        DateTime? m_lastChannelUpdateTime;
+
+        int m_chatBotUserId;
+        string m_chatBotoAuthToken;
+
+        public bool Run(string[] args)
+        {
+            Logger.Info("Checking Args...");
+            if(args.Length < 2)
+            {
+                Logger.Info("Usage: carl <chat bot user Id> <chat bot oauth> (channel viewer count limit - default is 5)");
+                Logger.Info("User info can be found here: https://dev.mixer.com/tutorials/chatbot.html");
+                return false;
+            }
+
+            if(!int.TryParse(args[0], out m_chatBotUserId))
+            {
+                Logger.Error("Failed to parse chat bot user id.");
+                return false;
+            }
+            m_chatBotoAuthToken = args[1];
+            if(args.Length > 2)
+            {
+                if (!int.TryParse(args[2], out m_viewerCountLimit))
+                {
+                    Logger.Error("Failed to parse viewer count limit.");
+                    return false;
+                }
+            }
+
+            Logger.Info("Setting up discovery");
+            // Start the discovery process.
+            ChannelDiscover dis = new ChannelDiscover(m_channelOverrides);
+            dis.OnChannelOnlineUpdate += OnChannelOnlineUpdate;
+            dis.Run();
+
+            Logger.Info("Setting up work master");
+            // Setup the work master
+            WorkMasterThread().ConfigureAwait(false);
+
+            Logger.Info("Setting up worker threads");
+            // Setup the worker threads.
+            int i = 0;
+            while (i < m_workerLimit)
+            {
+                i++;
+                Thread t = new Thread(WorkerThread);
+                t.Start();
+                m_workers.Add(t);
+            }
+            Logger.Info("Running!");
+            return true;
+        }
+
+        #region Connection Management
+
+        Dictionary<int, ChannelEntry> m_channelMap = new Dictionary<int, ChannelEntry>();
+        Dictionary<int, bool> m_channelProcessQueue = new Dictionary<int, bool>();
+        List<Thread> m_workers = new List<Thread>();
+
+        private async void WorkerThread()
+        {
+            while (true)
+            {
+                // Get a channel id to work on.
+                int channelId = -1;
+                lock (m_channelProcessQueue)
+                {
+                    foreach (KeyValuePair<int, bool> entry in m_channelProcessQueue)
+                    {
+                        // Skip already processing channel ids.
+                        if (entry.Value)
+                        {
+                            continue;
+                        }
+
+                        // Claim this channel id.
+                        channelId = entry.Key;
+                        m_channelProcessQueue[channelId] = true;
+                        break;
+                    }
+                }
+
+                if (channelId == -1)
+                {
+                    // No work to do, sleep.
+                    Thread.Sleep(100);
+                    continue;
+                }
+
+                // We have a channel id we should connect, try to do it.
+                ChatConnector conn = new ChatConnector(m_chatBotUserId, m_chatBotoAuthToken, channelId, this);
+
+                bool added = false;
+                if ((await conn.Connect()))
+                {
+                    // We succeeded, add the connection to the channel.
+                    lock (m_channelMap)
+                    {
+                        if (m_channelMap.ContainsKey(channelId))
+                        {
+                            m_channelMap[channelId].Chat = conn;
+                            conn.OnChatWsStateChanged += Chat_OnChatWsStateChanged;
+                            added = true;
+                        }
+                    }
+                }
+
+                // If we failed to connect or didn't add the chat, disconnect.
+                if (!added)
+                {
+                    await conn.Disconnect();
+                }
+
+                // Remove the channel from the processing map.
+                lock (m_channelProcessQueue)
+                {
+                    m_channelProcessQueue.Remove(channelId);
+                }
+            }
+        }
+
+        private void Chat_OnChatWsStateChanged(ChatConnector sender, ChatState newState, bool wasError)
+        {
+            // If the socket closed removed the channel.
+            if (newState == ChatState.Disconnected)
+            {
+                int channelId = sender.GetChannelId();
+                ThreadPool.QueueUserWorkItem(async (object o) =>
+                {
+                    Logger.Error($"Chat ws disconnected due to ws error for channel {channelId}");
+                    await RemoveChannel(channelId);
+                });
+            }
+        }
+
+        private async Task WorkMasterThread()
+        {
+            while (true)
+            {
+                int connectedChannels = 0;
+                int eligibleChannels = 0;
+                List<int> toRemove = new List<int>();
+                lock (m_channelMap)
+                {
+                    foreach (KeyValuePair<int, ChannelEntry> ent in m_channelMap)
+                    {
+                        if (m_lastChannelUpdateTime.HasValue && (m_lastChannelUpdateTime.Value - ent.Value.LastFoundTime).TotalSeconds > 180)
+                        {
+                            toRemove.Add(ent.Value.Channel.Id);
+                        }
+                        else
+                        {
+                            // If there isn't a chat setup, add it to the queue to get spun up.
+                            eligibleChannels++;
+                            if (ent.Value.Chat == null)
+                            {
+                                lock (m_channelProcessQueue)
+                                {
+                                    if (!m_channelProcessQueue.ContainsKey(ent.Value.Channel.Id))
+                                    {
+                                        m_channelProcessQueue.Add(ent.Value.Channel.Id, false);
+                                        MixerUtils.AddChannelMap(ent.Value.Channel.Id, ent.Value.Channel.Token);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // If the chat gets stuck in a disconnected state, clear the chat object.
+                                if (ent.Value.Chat.IsDisconnected())
+                                {
+                                    ent.Value.Chat = null;
+                                }
+                                else
+                                {
+                                    connectedChannels++;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Logger.Info($"{connectedChannels}/{eligibleChannels} ({(eligibleChannels == 0 ? 0 : Math.Round(((double)connectedChannels / (double)eligibleChannels)*100, 2))}%) connected channels");
+
+                foreach (int id in toRemove)
+                {
+                    await RemoveChannel(id);
+                }
+
+                await Task.Delay(m_workMasterTimeMs);
+            }
+        }
+
+        private async Task RemoveChannel(int channelId)
+        {
+            ChannelEntry entry;
+            lock (m_channelMap)
+            {
+                if (!m_channelMap.ContainsKey(channelId))
+                {
+                    return;
+                }
+
+                entry = m_channelMap[channelId];
+                m_channelMap.Remove(channelId);
+            }
+
+            if (entry.Chat != null)
+            {
+                Logger.Info($"Disconnecting channel {channelId}");
+                entry.Chat.OnChatWsStateChanged -= Chat_OnChatWsStateChanged;
+                await entry.Chat.Disconnect();
+            }
+        }
+
+        private void OnChannelOnlineUpdate(object sender, List<MixerChannel> e)
+        {
+            int channelsAdded = 0;
+            DateTime now = DateTime.Now;
+            lock (m_channelMap)
+            {
+                foreach (MixerChannel chan in e)
+                {
+                    // Filter by the viewer count limit.
+                    if (chan.ViewersCurrent < m_viewerCountLimit)
+                    {
+                        continue;
+                    }
+                    
+                    if (m_channelMap.ContainsKey(chan.Id))
+                    {
+                        m_channelMap[chan.Id].LastFoundTime = now;
+                        m_channelMap[chan.Id].Channel.ViewersCurrent = chan.ViewersCurrent;
+                    }
+                    else
+                    {
+                        channelsAdded++;
+                        m_channelMap.Add(chan.Id, new ChannelEntry()
+                        {
+                            Channel = chan,
+                            Chat = null,
+                            LastFoundTime = now
+                        });
+                    }
+                }
+            }
+            Logger.Info($"{channelsAdded} channels added to the map!");
+            m_lastChannelUpdateTime = DateTime.Now;
+        }
+
+        private ChatConnector GetChatConnector(int channelId)
+        {
+            lock (m_channelMap)
+            {
+                if (m_channelMap.ContainsKey(channelId))
+                {
+                    return m_channelMap[channelId].Chat;
+                }
+            }
+            return null;            
+        }
+
+        public async Task<bool> SendChatMessage(int channelId, string message)
+        {
+            ChatConnector connector = GetChatConnector(channelId);
+            if(connector == null)
+            {
+                return false;
+            }
+            return await connector.SendChatMessage(message);
+        }
+
+        public async Task<bool> SendWhisper(int channelId, string targetUserName, string message)
+        {
+            ChatConnector connector = GetChatConnector(channelId);
+            if (connector == null)
+            {
+                return false;
+            }
+            return await connector.SendWhisper(targetUserName, message);
+        }
+
+        #endregion
+
+        #region Firehose Managment
+
+        List<Firehose> m_firehoses = new List<Firehose>();
+
+        public bool SubFirehose(Firehose firehose)
+        {
+            lock(m_firehoses)
+            {
+                foreach(Firehose h in m_firehoses)
+                {
+                    if(h.GetUniqueId() == firehose.GetUniqueId())
+                    {
+                        return false;
+                    }
+                }
+                m_firehoses.Add(firehose);
+                return true;
+            }
+        }
+
+        public bool UnSubFirehost(Firehose firehose)
+        {
+            lock (m_firehoses)
+            {
+                for(int i = 0; i < m_firehoses.Count; i++)
+                {
+                    if (m_firehoses[i].GetUniqueId() == firehose.GetUniqueId())
+                    {
+                        m_firehoses.RemoveAt(i);
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+
+        void ICarl.OnChatMessage(ChatMessage msg)
+        {
+            foreach(Firehose h in m_firehoses)
+            {
+                h.PubChatMessage(msg);
+            }
+        }
+
+        void ICarl.OnUserActivity(UserActivity activity)
+        {
+            foreach (Firehose h in m_firehoses)
+            {
+                h.PubUserActivity(activity);
+            }
+        }
+
+        #endregion
+    }
+}
