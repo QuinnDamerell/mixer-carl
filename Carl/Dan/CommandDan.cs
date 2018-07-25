@@ -2,15 +2,21 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Carl;
+using Newtonsoft.Json;
 
 namespace Carl.Dan
 {
     public class CommandDan :  Dan, IFirehoseChatMessageListener
     {
+        const int c_extensionActiveTimeoutSeconds = 600;
+
         ConcurrentDictionary<int, bool> m_mockDict = new ConcurrentDictionary<int, bool>();
+        HttpClient m_client = new HttpClient();
 
         public CommandDan(IFirehose firehose) 
             : base(firehose)
@@ -52,11 +58,50 @@ namespace Carl.Dan
                 {
                     await HandleMockToggle(msg, false);
                 }
+                else if (IsCommand(msg, "summon"))
+                {
+                    await HandleSummon(msg);
+                }
             }
             else
             {
                 // Check if we need to mock.
                 CheckForMock(msg);
+            }
+        }
+
+        private async Task<int> GlobalWhisper(string userName, string message)
+        {
+            List<int> channelIds = CreeperDan.GetActiveChannelIds(userName);
+            if (channelIds == null)
+            {
+                return 0;
+            }
+            else
+            {
+                // Whisper them the message in all of the channels.
+                int successCount = 0;
+                foreach (int channelId in channelIds)
+                {
+                    if (await m_firehose.SendWhisper(channelId, userName, message))
+                    {
+                        successCount++;
+                    }
+                }
+                return successCount;
+            }
+        }
+
+        private async Task<bool> SendResponse(int channelId, string userName, string message, bool whisper)
+        {
+            Logger.Info($"Sent {(whisper ? "whisper" : "message")} to {userName}: {message}");
+            if(whisper)
+            {
+                return await m_firehose.SendWhisper(channelId, userName, message);
+            }
+            else
+            {
+                return await m_firehose.SendMessage(channelId, message);
             }
         }
 
@@ -66,7 +111,7 @@ namespace Carl.Dan
             {
                 return;
             }
-            await m_firehose.SendWhisper(msg.ChannelId, msg.UserName, "Commands: echo, hello, help, locate, whisper.");
+            await SendResponse(msg.ChannelId, msg.UserName, "Commands: echo, hello, help, locate, whisper, mock, publicmock, summon", true);
         }
 
         private async Task HandleLocateCommand(ChatMessage msg)
@@ -75,8 +120,7 @@ namespace Carl.Dan
             List<int> channelIds = CreeperDan.GetActiveChannelIds(userName);
             if (channelIds == null)
             {
-                await m_firehose.SendWhisper(msg.ChannelId, msg.UserName, $"User '{userName}' not found in any channels");
-                Logger.Info($"locate failed to find user {userName}");
+                await SendResponse(msg.ChannelId, msg.UserName, $"User '{userName}' not found in any channels", msg.IsWhisper);
             }
             else
             {
@@ -94,38 +138,30 @@ namespace Carl.Dan
                             break;
                         }
                     }
-                    await m_firehose.SendWhisper(msg.ChannelId, msg.UserName, output);
-                    Logger.Info($"locate found user {userName} in {channelIds.Count} channels");
+                    await SendResponse(msg.ChannelId, msg.UserName, output, msg.IsWhisper);
                 });
             }
         }
 
         private async Task HandleWhisperCommand(ChatMessage msg)
         {
+            if (!HasPermissions(msg.UserId))
+            {
+                return;
+            }
+
             int secondSpace = msg.Text.IndexOf(' ', 9);
             string userName = msg.Text.Substring(8, secondSpace - 8).Trim();
             string text = msg.Text.Substring(secondSpace).Trim();
 
-            List<int> channelIds = CreeperDan.GetActiveChannelIds(userName);
-            if (channelIds == null)
+            int whispers = await GlobalWhisper(userName, $"{msg.UserName} says: {text}");
+            if (whispers == 0)
             {
-                await m_firehose.SendWhisper(msg.ChannelId, msg.UserName, $"User '{userName}' not found in any channels");
-                Logger.Info($"global whisper failed to find user {userName}");
+                await SendResponse(msg.ChannelId, msg.UserName, $"User '{userName}' not found in any channels", msg.IsWhisper);
             }
             else
             {
-                // Whisper them the message in all of the channels.
-                int successCount = 0;
-                foreach (int channelId in channelIds)
-                {
-                    if (await m_firehose.SendWhisper(channelId, userName, $"{msg.UserName} says: {text}"))
-                    {
-                        successCount++;
-                    }
-                }
-                // Respond to the user.            
-                await m_firehose.SendWhisper(msg.ChannelId, msg.UserName, $"Sent whisper to {userName} in {successCount} channels");
-                Logger.Info($"Sent whisper to {userName} in {successCount} channels");
+                await SendResponse(msg.ChannelId, msg.UserName, $"Sent whisper to {userName} in {whispers} channels", msg.IsWhisper);
             }
         }
 
@@ -194,5 +230,114 @@ namespace Carl.Dan
                 }
             }
         }
+
+        #region Summon
+
+        private async Task HandleSummon(ChatMessage msg)
+        {
+            // Get the args
+            string[] args = msg.Text.Split(' ');
+            if (args.Length < 2)
+            {
+                return;
+            }
+            string summonUserName = args[1];
+            string channelName = await MixerUtils.GetChannelName(msg.ChannelId);
+            
+
+            if (await CheckIfUserHasAnActiveExtension(summonUserName))
+            {
+                // The user has an active extension
+                if(await PostSummonToExtension(summonUserName, msg.UserName, channelName))
+                {
+                    await SendResponse(msg.ChannelId, msg.UserName, $"Sent extension summon to {summonUserName} for channel {channelName}", msg.IsWhisper);
+                }
+                else
+                {
+                    await SendResponse(msg.ChannelId, msg.UserName, $"FAILED to send extension summon to {summonUserName} for channel {channelName}", msg.IsWhisper);
+                }
+            }
+            else
+            {
+                // The user doesn't have the extension! Whisper them.
+                int whispers = await GlobalWhisper(summonUserName, $"{msg.UserName} summons you to @{channelName}'s channel! https://mixer.com/{channelName}");
+                await SendResponse(msg.ChannelId, msg.UserName, $"Sent whisper summon to {summonUserName} for channel @{channelName} in {whispers} channels", msg.IsWhisper);
+            }
+        }
+
+        private async Task<bool> CheckIfUserHasAnActiveExtension(string userName)
+        {
+            HttpRequestMessage request = new HttpRequestMessage();
+            request.RequestUri = new Uri($"https://relay.quinndamerell.com/Blob.php?key=mixer-carl-{userName}-active");
+            try
+            {
+                HttpResponseMessage response = await m_client.SendAsync(request);
+                string res = await response.Content.ReadAsStringAsync();
+                DateTime parsedTime;
+                if(DateTime.TryParse(res, out parsedTime))
+                {
+                    return (DateTime.Now - parsedTime).TotalSeconds < c_extensionActiveTimeoutSeconds;
+                }
+                return false;               
+            }
+            catch (Exception e)
+            {
+                Logger.Error($"Failed to query relay.quinndamerell.com active for user {userName}", e);
+            }
+            return false;
+        }
+
+        public class Command
+        {
+            public string Name;
+            public string SubmitTime;
+            public string Summoner;
+            public string Channel;
+        }
+
+        public class Root
+        {
+            public List<Command> Commands;
+        }
+
+        private async Task<bool> PostSummonToExtension(string userToSummon, string userWhoSummoned, string channelName)
+        {
+            // Build the data
+            Root r = new Root()
+            {
+                Commands = new List<Command>()
+                {
+                    new Command()
+                    {
+                        Name="Summon",
+                        SubmitTime=DateTime.UtcNow.ToString("o"),
+                        Summoner=userWhoSummoned,
+                        Channel=channelName,
+                    }
+                }
+            };
+            string data = WebUtility.UrlEncode(JsonConvert.SerializeObject(r));
+
+            // Make the request
+            HttpRequestMessage request = new HttpRequestMessage();
+            request.Method = HttpMethod.Get;
+            request.RequestUri = new Uri($"https://relay.quinndamerell.com/Blob.php?key=mixer-carl-{userName}-commands&data={data}");
+            try
+            {
+                HttpResponseMessage response = await m_client.SendAsync(request);
+                if(response.StatusCode == HttpStatusCode.OK)
+                {
+                    return true;
+                }
+                return false;
+            }
+            catch (Exception e)
+            {
+                Logger.Error($"Failed to submit summon command to relay.quinndamerell.com active for user {userToSummon}", e);
+            }
+            return false;
+        }
+
+        #endregion
     }
 }
