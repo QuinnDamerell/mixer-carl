@@ -27,6 +27,11 @@ namespace Carl
         Disconnected
     }
 
+    public interface IFirehoseCommandListener
+    {
+        void OnCommand(string command, ChatMessage msg);
+    }
+
     public interface IFirehoseChatMessageListener
     {
         void OnChatMessage(ChatMessage msg);
@@ -44,6 +49,12 @@ namespace Carl
 
     public interface IFirehose
     {
+        //
+        // Command APIs
+
+        void SubCommandListener(IFirehoseCommandListener listener);
+        void UnSubCommandListener();
+
         // 
         // Chat message APIs
 

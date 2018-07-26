@@ -286,14 +286,14 @@ namespace Carl
                 JToken messageVal = dataObj["message"];
                 if(messageVal != null)
                 {
+                    msg.Text = String.Empty;
                     JToken msgVal = messageVal["message"];
                     foreach (var child in msgVal.Children())
                     {
                         JToken text = child["text"];
                         if(text != null)
                         {
-                            msg.Text = text.Value<string>();
-                            break;
+                            msg.Text += text.Value<string>();
                         }
                     }
                 }

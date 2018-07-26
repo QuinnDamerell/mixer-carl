@@ -21,6 +21,9 @@ namespace Carl
         // Called by the chat connectors when a user has joined a channel.        
         void OnUserActivity(UserActivity activity);
 
+        // Called by the command Dan when there's a command to handle.
+        void OnCommand(string command, ChatMessage msg);
+
         // Called by the firehose and chat connectors when they want to send a message.
         Task<bool> SendChatMessage(int channelId, string message);
 
@@ -383,6 +386,14 @@ namespace Carl
             foreach (Firehose h in m_firehoses)
             {
                 h.PublishChatConnectionChanged(channelId, state);
+            }
+        }
+
+        public void OnCommand(string command, ChatMessage msg)
+        {
+            foreach (Firehose h in m_firehoses)
+            {
+                h.PubCommand(command, msg);
             }
         }
 

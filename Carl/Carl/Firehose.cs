@@ -22,6 +22,32 @@ namespace Carl
             return m_uniqueId;
         }
 
+        #region Command Handlers
+
+
+        IFirehoseCommandListener m_commandListener;
+
+        public void SubCommandListener(IFirehoseCommandListener listener)
+        {
+            m_commandListener = listener;
+        }
+
+        public void UnSubCommandListener()
+        {
+            m_commandListener = null;
+        }
+
+        public void PubCommand(string command, ChatMessage msg)
+        {
+            IFirehoseCommandListener l = m_commandListener;
+            if (l != null)
+            {
+                l.OnCommand(command, msg);                
+            }
+        }
+
+        #endregion
+
         #region Chat Messages
 
         IFirehoseChatMessageListener m_listener = null;

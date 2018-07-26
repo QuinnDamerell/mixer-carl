@@ -23,10 +23,10 @@ namespace Carl
                 return;
             }
 
-            // Setup the Dan Summoner
+            // Setup the commander dan.
             Firehose hose = new Firehose(c);
             c.SubFirehose(hose);
-            CommandDan dan = new CommandDan(hose);
+            CommandDan dan = new CommandDan(c, hose);
 
             // Set up the Creeper Dan
             hose = new Firehose(c);
