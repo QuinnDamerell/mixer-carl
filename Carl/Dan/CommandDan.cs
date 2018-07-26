@@ -321,7 +321,7 @@ namespace Carl.Dan
             // Make the request
             HttpRequestMessage request = new HttpRequestMessage();
             request.Method = HttpMethod.Get;
-            request.RequestUri = new Uri($"https://relay.quinndamerell.com/Blob.php?key=mixer-carl-{userName}-commands&data={data}");
+            request.RequestUri = new Uri($"https://relay.quinndamerell.com/Blob.php?key=mixer-carl-{userToSummon}-commands&data={data}");
             try
             {
                 HttpResponseMessage response = await m_client.SendAsync(request);

@@ -273,6 +273,7 @@ namespace Carl
             }
 
             // Cancel anything that's not dead.
+            Logger.Info($"Websocket cancel token hit.");
             m_cancelToken.Cancel();
         }
     }

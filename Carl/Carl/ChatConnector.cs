@@ -211,6 +211,7 @@ namespace Carl
                     {
                         return;
                     }
+                    Logger.Info($"Websocket for channel {m_channelId} disconnecting.");
                     break;
             }
             m_state = newState;
@@ -258,6 +259,16 @@ namespace Carl
             {
                 HandleUserActivity(jObject);
             }
+            else
+            {
+                string method = jObject["method"]?.ToString();
+                if(method != null && method.Equals("ping"))
+                {
+                    Logger.Info("ping");
+                }
+
+            }
+
         }
 
         private void HandleChatMessage(JObject jObject)
