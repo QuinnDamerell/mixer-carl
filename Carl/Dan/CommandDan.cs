@@ -30,13 +30,11 @@ namespace Carl.Dan
             {
                 if (IsCommand(msg, "echo"))
                 {
-                    await m_firehose.SendWhisper(msg.ChannelId, msg.UserName, msg.Text.Substring(5));
-                    Logger.Info($"Sending echo! {msg.Text}");
+                    await SendResponse(msg.ChannelId, msg.UserName, msg.Text.Substring(5), msg.IsWhisper);
                 }
                 else if (IsCommand(msg, "hello"))
                 {
-                    await m_firehose.SendWhisper(msg.ChannelId, msg.UserName, "Oh Hi!");
-                    Logger.Info($"Sending Hi!");
+                    await SendResponse(msg.ChannelId, msg.UserName, "Oh Hi!", msg.IsWhisper);
                 }
                 else if (IsCommand(msg, "locate"))
                 {
@@ -107,10 +105,6 @@ namespace Carl.Dan
 
         private async Task HandleHelp(ChatMessage msg)
         {
-            if(!HasPermissions(msg.UserId))
-            {
-                return;
-            }
             await SendResponse(msg.ChannelId, msg.UserName, "Commands: echo, hello, help, locate, whisper, mock, publicmock, summon", true);
         }
 
@@ -147,6 +141,7 @@ namespace Carl.Dan
         {
             if (!HasPermissions(msg.UserId))
             {
+                await SendResponse(msg.ChannelId, msg.UserName, "You can't do that", true);
                 return;
             }
 
@@ -169,6 +164,7 @@ namespace Carl.Dan
         {
             if (!HasPermissions(msg.UserId))
             {
+                await SendResponse(msg.ChannelId, msg.UserName, "You can't do that", true);
                 return;
             }
 
@@ -176,15 +172,14 @@ namespace Carl.Dan
             int commandSpace = msg.Text.IndexOf(' ');
             if (commandSpace == -1)
             {
-                await m_firehose.SendWhisper(msg.ChannelId, msg.UserName, $"Invalid");
-                Logger.Info($"Invalid");
+                await SendResponse(msg.ChannelId, msg.UserName, "Invalid", msg.IsWhisper);
+                return;
             }
             string userName = msg.Text.Substring(commandSpace).Trim();
             int? userId = await MixerUtils.GetUserId(userName);
             if(!userId.HasValue || userName.Length == 0)
             {
-                await m_firehose.SendWhisper(msg.ChannelId, msg.UserName, $"User '{userName}' not found on mixer.");
-                Logger.Info($"Mock can't find user {userName}");
+                await SendResponse(msg.ChannelId, msg.UserName, $"Mock '{userName}' not found on mixer.", msg.IsWhisper);
                 return;
             }
 
@@ -198,8 +193,8 @@ namespace Carl.Dan
             }
 
             string output = $"{(isPrivate ? "Private" : "Public")} mocking {(removed ? "removed" : "setup")} for {userName}.";
-            await m_firehose.SendWhisper(msg.ChannelId, msg.UserName, output);
-            Logger.Info(output);
+            await SendResponse(msg.ChannelId, msg.UserName, output, msg.IsWhisper);
+            return;
         }
 
         private bool IsCommand(ChatMessage msg, string commandName)
