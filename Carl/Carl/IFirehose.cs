@@ -21,6 +21,12 @@ namespace Carl
         public int ChannelId; // For co-streams this tells you which they joined.
     }
 
+    public enum ChatConnectionState
+    {
+        Connected,
+        Disconnected
+    }
+
     public interface IFirehoseChatMessageListener
     {
         void OnChatMessage(ChatMessage msg);
@@ -29,6 +35,11 @@ namespace Carl
     public interface IFirehoseUserActivityListener
     {
         void OnUserActivity(UserActivity activity);
+    }
+
+    public interface IFirehoseChatConnectionChanged
+    {
+        void OnChatConnectionChanged(int channelId, ChatConnectionState state);
     }
 
     public interface IFirehose
@@ -48,5 +59,11 @@ namespace Carl
         void SubUserActivity(IFirehoseUserActivityListener listener);
         void UnSubUserActivity();
         void UpdateUserActivityFilter(int channelId);
+
+        // 
+        // Chat Connection APIs
+
+        void SubChatConnectionChanged(IFirehoseChatConnectionChanged listner);
+        void UnSubChatConnectionChanged();
     }
 }

@@ -100,5 +100,30 @@ namespace Carl
 
         #endregion
 
+        #region Chat Connection Changed
+
+        IFirehoseChatConnectionChanged m_chatConChangedListner;
+
+        public void SubChatConnectionChanged(IFirehoseChatConnectionChanged listner)
+        {
+            m_chatConChangedListner = listner;
+        }
+
+        public void UnSubChatConnectionChanged()
+        {
+            m_chatConChangedListner = null;
+        }
+
+        public void PublishChatConnectionChanged(int channelId, ChatConnectionState state)
+        {
+            IFirehoseChatConnectionChanged l = m_chatConChangedListner;
+            if (l != null)
+            {
+                l.OnChatConnectionChanged(channelId, state);                
+            }
+        }
+
+        #endregion
+
     }
 }

@@ -8,9 +8,11 @@ namespace Carl.Dan
 {
     public class CreeperDan : Dan, IFirehoseUserActivityListener
     {
+        const int c_userChannelTimeoutMinutes = 1440;
+
         class UserActivtyEntry
         {
-            public List<int> ActiveChannels;
+            public Dictionary<int, DateTime> ActiveChannels;
         }
 
         ConcurrentDictionary<string, UserActivtyEntry> m_userMap = new ConcurrentDictionary<string, UserActivtyEntry>();
@@ -36,14 +38,31 @@ namespace Carl.Dan
         {
             List<int> activeChannels = new List<int>();
             UserActivtyEntry entry = null;
+            DateTime now = DateTime.Now;
             if (m_userMap.TryGetValue(userName.ToLower(), out entry))
             {
                 // The user exists, update the active list.
                 lock (entry.ActiveChannels)
                 {
-                    foreach(int i in entry.ActiveChannels)
+                    List<int> remove = new List<int>();
+                    foreach(var pair in entry.ActiveChannels)
                     {
-                        activeChannels.Add(i);
+                        // Check if the user has been in this channel for a long time. 
+                        // If so we will assume we missed the leave message and remove them.
+                        if ((now - pair.Value).TotalMinutes > c_userChannelTimeoutMinutes)
+                        {
+                            remove.Add(pair.Key);
+                        }
+                        else
+                        {
+                            activeChannels.Add(pair.Key);
+                        }
+                    }
+
+                    // Clean up.
+                    foreach(int i in remove)
+                    {
+                        entry.ActiveChannels.Remove(i);
                     }
                 }
                 return activeChannels.Count == 0 ? null : activeChannels;
@@ -63,7 +82,8 @@ namespace Carl.Dan
                         // The user exists, update the active list.
                         lock(entry.ActiveChannels)
                         {
-                            entry.ActiveChannels.Add(activity.ChannelId);
+                            // Set or update the join time.
+                            entry.ActiveChannels[activity.ChannelId] = DateTime.Now;
                         }
                         break;
                     }
@@ -72,11 +92,12 @@ namespace Carl.Dan
                         // The user doesn't exist, add them into the map.
                         entry = new UserActivtyEntry()
                         {
-                            ActiveChannels = new List<int>()
-                            {
-                                activity.ChannelId
-                            }
+                            ActiveChannels = new Dictionary<int, DateTime>()
                         };
+
+                        // Set the current time as the join time.
+                        entry.ActiveChannels[activity.ChannelId] = DateTime.Now;
+
                         if (!m_userMap.TryAdd(activity.UserName.ToLower(), entry))
                         {
                             // Someone else already added it, try again.

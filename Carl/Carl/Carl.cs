@@ -148,6 +148,10 @@ namespace Carl
                 {
                     await conn.Disconnect();
                 }
+                else
+                {
+                    OnChatConnectionChanged(channelId, ChatConnectionState.Connected);
+                }
 
                 // Remove the channel from the processing map.
                 lock (m_channelProcessQueue)
@@ -242,6 +246,9 @@ namespace Carl
                 m_channelMap.Remove(channelId);
             }
 
+            // Fire the remove event
+            OnChatConnectionChanged(entry.Channel.Id, ChatConnectionState.Disconnected);
+
             if (entry.Chat != null)
             {
                 Logger.Info($"Disconnecting channel {channelId}");
@@ -319,7 +326,7 @@ namespace Carl
 
         #endregion
 
-        #region Firehose Managment
+        #region Firehose Management
 
         List<Firehose> m_firehoses = new List<Firehose>();
 
@@ -368,6 +375,14 @@ namespace Carl
             foreach (Firehose h in m_firehoses)
             {
                 h.PubUserActivity(activity);
+            }
+        }
+
+        void OnChatConnectionChanged(int channelId, ChatConnectionState state)
+        {
+            foreach (Firehose h in m_firehoses)
+            {
+                h.PublishChatConnectionChanged(channelId, state);
             }
         }
 

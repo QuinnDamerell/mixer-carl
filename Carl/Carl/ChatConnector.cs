@@ -264,11 +264,9 @@ namespace Carl
                 string method = jObject["method"]?.ToString();
                 if(method != null && method.Equals("ping"))
                 {
-                    Logger.Info("ping");
+                    Logger.Info("received ping");
                 }
-
             }
-
         }
 
         private void HandleChatMessage(JObject jObject)

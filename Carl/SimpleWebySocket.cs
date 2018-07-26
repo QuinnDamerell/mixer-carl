@@ -48,12 +48,6 @@ namespace Carl
             private set { m_state = value; }
         }
 
-        public TimeSpan DefaultKeepAliveInterval
-        {
-            get => m_ws.Options.KeepAliveInterval;
-            set => m_ws.Options.KeepAliveInterval = value;
-        }
-
         public SimpleWebySocket(ISimpleWebySocketCallbacks callback, string url)
         {
             m_callback = callback;
@@ -77,7 +71,7 @@ namespace Carl
             UpdateState(SimpleWebySocketState.Connecting);
 
             // Setup
-            DefaultKeepAliveInterval = Timeout.InfiniteTimeSpan;
+            m_ws.Options.KeepAliveInterval = new TimeSpan(0, 2, 0);
 
             // Connect
             try
@@ -186,13 +180,14 @@ namespace Carl
 
                 WebSocketReceiveResult result = null;
                 // Wait on data from the socket.
+                DateTime start = DateTime.Now;
                 try
                 {
                     result = await ws.ReceiveAsync(new ArraySegment<byte>(buffer), m_cancelToken.Token);
                 }
                 catch (Exception ex)
                 {
-                    Logger.Error("Websocket received an error while reading the websocket", ex);
+                    Logger.Error($"Websocket received an error while reading the websocket: {(DateTime.Now - start).TotalSeconds}s", ex);
                     await InternalDisconnect(WebSocketCloseStatus.ProtocolError);
                     break;
                 }
@@ -273,7 +268,6 @@ namespace Carl
             }
 
             // Cancel anything that's not dead.
-            Logger.Info($"Websocket cancel token hit.");
             m_cancelToken.Cancel();
         }
     }
