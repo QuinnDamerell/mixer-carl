@@ -1,0 +1,1 @@
+To run, execute Carl.cmd from your terminal with your bot's userId and OAuthKey

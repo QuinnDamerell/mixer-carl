@@ -1,0 +1,2 @@
+cd bins
+Carl.exe %*

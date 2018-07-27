@@ -260,3 +260,4 @@ paket-files/
 __pycache__/
 *.pyc
 /Carl/Properties/launchSettings.json
+/CarlBuild/bins/*
