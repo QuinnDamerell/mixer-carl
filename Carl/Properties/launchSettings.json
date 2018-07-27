@@ -17,7 +17,6 @@
     },
     "Carl": {
       "commandName": "Project",
-      "commandLineArgs": "53526669 xMadqlFgB7yDJhx42gj2ndA7138yyBitSyvAzqX9YhrV2QVuUrKzBBXdGMRcsUdU",
       "launchBrowser": true,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
