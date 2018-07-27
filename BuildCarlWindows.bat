@@ -4,7 +4,7 @@ cd CarlBuild
 mkdir bins
 cd bins
 dotnet restore ..\Carl\
-dotnet publish -c Release -r win10-x86 -o ..\CarlBuild\bins ..\..\Carl\ 
+dotnet publish -c Release -r win10-x64 -o ..\CarlBuild\bins ..\..\Carl\ 
 cp ..\..\Carl\CommonWords.txt
 echo _
 echo _
