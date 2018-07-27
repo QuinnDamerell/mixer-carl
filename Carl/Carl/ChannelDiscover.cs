@@ -21,7 +21,7 @@ namespace Carl
         public delegate void ChannelOnlineUpdate(object sender, List<MixerChannel> e);
         public event ChannelOnlineUpdate OnChannelOnlineUpdate;
 
-        const int m_threadSleepTimeMs = 30000;
+        const int m_threadSleepTimeMs = 15000;
         HttpClient m_client = new HttpClient();
         List<int> m_channelOverrides;
 

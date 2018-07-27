@@ -9,7 +9,7 @@ using System.Timers;
 
 namespace Carl.Dan
 {
-    public class MessagesDan : Dan, IFirehoseChatMessageListener, IFirehoseCommandListener
+    public class MessagesDan : Dan, IFirehoseChatMessageListener, IFirehoseCommandListener, IHistoricAccumulatorInsertPreparer<string>
     {
         // Message Counts
         int m_messageAccPerSec = 0;
@@ -18,8 +18,7 @@ namespace Carl.Dan
         List<int> m_messagesPerMin = new List<int>();
         DateTime m_lastMinUpdate;
 
-        ConcurrentDictionary<string, int> m_wordDict = new ConcurrentDictionary<string, int>();
-        ConcurrentDictionary<string, int> m_commonWordDict = new ConcurrentDictionary<string, int>();
+        HistoricAccumulator<string> m_wordHistory = new HistoricAccumulator<string>();
 
         public MessagesDan(IFirehose firehose)
             : base(firehose)
@@ -27,10 +26,26 @@ namespace Carl.Dan
             m_firehose.SubChatMessages(this);
             m_firehose.SubCommandListener(this);
 
-            // Build the common work list.
-            SetupCommonWordsList();
+            m_wordHistory.SetPreparer(this);
 
             var _ignored = Task.Run(() => StatsThread());
+        }
+
+        public bool PrepareForInsert(ref string value)
+        {
+            // Remove empty strings.
+            if (String.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+            // Remove single letters and double letters.
+            if(value.Length < 3)
+            {
+                return false;
+            }
+            // Lower the case.
+            value = value.ToLower();
+            return true;
         }
 
         public void OnChatMessage(ChatMessage msg)
@@ -39,37 +54,8 @@ namespace Carl.Dan
             m_messageAccPerSec++;
             m_messageAccPerMin++;
 
-            string[] words = msg.Text.Split(' ');
-            foreach(string word in words)
-            {
-                // Remove empty strings.
-                if(String.IsNullOrWhiteSpace(word))
-                {
-                    continue;
-                }
-
-                // Lower case.
-                string lowerWord = word.ToLower();
-
-                // Filter out common words.
-                int tmp;
-                if(m_commonWordDict.TryGetValue(lowerWord, out tmp))
-                {
-                    continue;
-                }
-
-                // Add or update.
-                int currentValue = 0;
-                if(m_wordDict.TryGetValue(lowerWord, out currentValue))
-                {
-                    int newValue = currentValue + 1;
-                    m_wordDict.TryUpdate(lowerWord, newValue, currentValue);
-                }
-                else
-                {
-                    m_wordDict.TryAdd(lowerWord, 1);
-                }
-            }
+            // Add the words to the history.
+            m_wordHistory.AddValue(msg.Text.Split(' '));
         }
 
         private async void StatsThread()
@@ -80,30 +66,21 @@ namespace Carl.Dan
 
                 try
                 {
-                    int avgPerSec = CalcRollingAverage(m_messagesPerSec, m_messageAccPerSec);
+                    // Update the averages.
+                    CalcRollingAverage(m_messagesPerSec, m_messageAccPerSec);
                     m_messageAccPerSec = 0;
 
-                    int minValue = -1;
-                    if ((DateTime.Now - m_lastMinUpdate).TotalMinutes > 60)
+                    if ((DateTime.Now - m_lastMinUpdate).TotalSeconds > 60)
                     {
-                        minValue = m_messageAccPerMin;
+                        CalcRollingAverage(m_messagesPerMin, m_messageAccPerMin);
                         m_messageAccPerMin = 0;
                         m_lastMinUpdate = DateTime.Now;
                     }
-                    int avgPerMin = CalcRollingAverage(m_messagesPerMin, minValue);
 
-                    // Get the top words.
-                    var topWords = GetTopWords(5);
+                    Logger.Info(GetCurrentStatsOutput(5, true));
 
-                    DecayWordMap();
-
-                    string output = $"Messages {avgPerSec}/s {avgPerMin}/m; top words: ";
-                    foreach(var pair in topWords)
-                    {
-                        output += $"'{pair.Item1}'/{pair.Item2}, ";
-                    }
-
-                    Logger.Info(output);
+                    // Decay the history.
+                    m_wordHistory.DecayHistory();
                 }
                 catch(Exception e)
                 {
@@ -119,80 +96,33 @@ namespace Carl.Dan
             }
         }
 
-        private void SetupCommonWordsList()
+        private string GetCurrentStatsOutput(int maxTopValues, bool includeCount = false)
         {
-            Logger.Info("Building common word list...");
-            try
+            // Update the averages.
+            int avgPerSec = CalcRollingAverage(m_messagesPerSec);
+            int avgPerMin = CalcRollingAverage(m_messagesPerMin);
+
+            // Get the top words.
+            var topWords = m_wordHistory.GetTopValues(maxTopValues);
+
+            // Build the output
+            string output = $"I'm processing {avgPerSec.ToString("n0")} msg/sec, {avgPerMin.ToString("n0")} msg/min. The top {maxTopValues} words on Mixer are currently: ";
+            bool isFirst = true;
+            foreach (var pair in topWords)
             {
-                using (FileStream f = File.Open("CommonWords.txt", FileMode.Open))
+                if(!isFirst)
                 {
-                    using (StreamReader reader = new StreamReader(f))
-                    {
-                        while(!reader.EndOfStream)
-                        {
-                            m_commonWordDict.TryAdd(reader.ReadLine(), 0);
-                        }
-                    }
+                    output += ", ";
+                }
+                isFirst = false;
+
+                output += pair.Item1;
+                if(includeCount)
+                {
+                    output += $"/{pair.Item2}";
                 }
             }
-            catch (Exception e)
-            {
-                Logger.Error("Failed to open common words list.", e);
-            }
-        }
-
-        private void DecayWordMap()
-        {
-            // Decay the word map.
-            foreach (var pair in m_wordDict)
-            {
-                int newValue = pair.Value - 2;
-                if (newValue <= 0)
-                {
-                    int tmp;
-                    m_wordDict.TryRemove(pair.Key, out tmp);
-                }
-                else
-                {
-                    m_wordDict[pair.Key] = newValue;
-                }
-            }
-        }
-
-        private List<Tuple<string, int>> GetTopWords(int listCount)
-        {
-            // Build the top words
-            List<Tuple<string, int>> topWords = new List<Tuple<string, int>>();
-
-            foreach (var pair in m_wordDict)
-            {
-                int listMax = Math.Min(listCount, topWords.Count);
-                bool shouldBeAdded = false;
-                int pos;
-                for (pos = listMax - 1; pos >= 0; pos--)
-                {
-                    if(pair.Value <= topWords[pos].Item2)
-                    {
-                        break;                    
-                    }
-                    shouldBeAdded = true;              
-                }
-                if(shouldBeAdded)
-                {
-                    pos++;
-                    topWords.Insert(pos, new Tuple<string, int>(pair.Key, pair.Value));
-                    if (topWords.Count > listCount)
-                    {
-                        topWords.RemoveAt(topWords.Count - 1);
-                    }                    
-                }
-                if(topWords.Count < listCount)
-                {
-                    topWords.Add(new Tuple<string, int>(pair.Key, pair.Value));
-                }
-            }
-
-            return topWords;
+            return output;
         }
 
         private int CalcRollingAverage(List<int> list, int valueToAdd = -1)
@@ -217,8 +147,9 @@ namespace Carl.Dan
         {
             if(command.Equals("msgstats"))
             {
-                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, "", msg.IsWhisper);
+                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, GetCurrentStatsOutput(10), msg.IsWhisper);
             }
         }
+
     }
 }
