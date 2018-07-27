@@ -9,7 +9,14 @@ namespace Carl.Dan
     {
         static public async Task<int> GlobalWhisper(IFirehose firehose, string userName, string message)
         {
-            List<int> channelIds = CreeperDan.GetActiveChannelIds(userName);
+            // Find the userId.
+            int? userId = await MixerUtils.GetUserId(userName);
+            if(!userId.HasValue)
+            {
+                return 0;
+            }
+
+            List<int> channelIds = CreeperDan.GetActiveChannelIds(userId.Value);
             if (channelIds == null)
             {
                 return 0;
@@ -74,9 +81,19 @@ namespace Carl.Dan
             return GetCommandBody(body);
         }
 
+        static public async Task<bool> SendAccessDenied(IFirehose firehose, ChatMessage msg, bool forceWhisper = false)
+        {
+            return await SendAccessDenied(firehose, msg.ChannelId, msg.UserName, msg.IsWhisper || forceWhisper);
+        }
+
         static public async Task<bool> SendAccessDenied(IFirehose firehose, int channelId, string userName, bool whisper)
         {
             return await SendResponse(firehose, channelId, userName, "You don't have permissions to do that 🤨", whisper);
+        }
+
+        public static async Task<bool> SendCantFindUser(IFirehose m_firehose, ChatMessage msg, string failedToFindUserName)
+        {
+            return await SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"It doesn't look like {failedToFindUserName} is on Mixer right now. (Maybe they're lurking?)", msg.IsWhisper);
         }
 
         static public async Task<bool> SendResponse(IFirehose firehose, int channelId, string userName, string message, bool whisper)
@@ -90,6 +107,11 @@ namespace Carl.Dan
             {
                 return await firehose.SendMessage(channelId, message);
             }
+        }
+
+        public static bool HasAdvancePermissions(int userId)
+        {
+            return userId == 213923 || userId == 354879;
         }
     }
 }

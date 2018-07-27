@@ -17,6 +17,8 @@ namespace Carl
     {
         public static void Main(string[] args)
         {
+            MixerUtils.Init();
+
             Carl c = new Carl();
             if(!c.Run(args))
             {

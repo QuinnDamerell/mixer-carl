@@ -25,6 +25,11 @@ namespace Carl
             public string token;
         }
 
+        public static void Init()
+        {
+            s_client.DefaultRequestHeaders.Add("Client-ID", "Karl");
+        }
+
         public async static Task<string> GetChannelName(int channelId)
         {
             // Look for it in the cache

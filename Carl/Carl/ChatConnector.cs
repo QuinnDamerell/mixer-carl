@@ -56,6 +56,7 @@ namespace Carl
             m_oauthToken = oAuthToken;
             m_callback = callback;
             m_rand = new Random(DateTime.Now.Millisecond);
+            m_client.DefaultRequestHeaders.Add("Client-ID", "Karl");
         }
 
         public int GetChannelId()
@@ -373,8 +374,8 @@ namespace Carl
             JToken dataObj = jObject["data"];
             if (dataObj != null)
             {
-                JToken usernameValue = dataObj["username"];
-                if (usernameValue == null)
+                JToken userIdValue = dataObj["id"];
+                if (userIdValue == null)
                 {
                     return;
                 }
@@ -388,7 +389,7 @@ namespace Carl
                 {
                     ChannelId = channelValue.Value<int>(),
                     IsJoin = isJoin,
-                    UserName = usernameValue.Value<string>(),
+                    UserId = userIdValue.Value<int>(),
                 });
             }
         }

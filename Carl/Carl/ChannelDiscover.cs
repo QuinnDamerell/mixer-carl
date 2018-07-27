@@ -28,6 +28,7 @@ namespace Carl
         public ChannelDiscover(List<int> channelOverrides = null)
         {
             m_channelOverrides = channelOverrides;
+            m_client.DefaultRequestHeaders.Add("Client-ID", "Karl");
         }
 
         public void Run()

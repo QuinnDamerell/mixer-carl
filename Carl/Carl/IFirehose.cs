@@ -16,7 +16,7 @@ namespace Carl
 
     public class UserActivity
     {
-        public string UserName;
+        public int UserId;
         public bool IsJoin;
         public int ChannelId; // For co-streams this tells you which they joined.
     }

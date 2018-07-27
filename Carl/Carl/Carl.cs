@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Carl.Dan;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -224,7 +225,7 @@ namespace Carl
                     }
                 }
 
-                Logger.Info($"{connectedChannels}/{eligibleChannels} ({(eligibleChannels == 0 ? 0 : Math.Round(((double)connectedChannels / (double)eligibleChannels)*100, 2))}%) connected channels");
+                Logger.Info($"{connectedChannels}/{eligibleChannels} ({(eligibleChannels == 0 ? 0 : Math.Round(((double)connectedChannels / (double)eligibleChannels)*100, 2))}%) connected channels; tracking {CreeperDan.GetViewerCount()} viewers.");
 
                 foreach (int id in toRemove)
                 {

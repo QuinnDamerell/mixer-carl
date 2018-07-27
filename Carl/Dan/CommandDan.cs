@@ -22,6 +22,7 @@ namespace Carl.Dan
         public CommandDan(ICarl commandCallback, IFirehose firehose) 
             : base(firehose)
         {
+            m_client.DefaultRequestHeaders.Add("Client-ID", "Karl");
             m_commandCallback = commandCallback;
             m_firehose.SubChatMessages(this);
         }
@@ -46,7 +47,7 @@ namespace Carl.Dan
                 // See if we can handle it internally.
                 if (command.Equals("help") || command.Equals("commands"))
                 {
-                    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"Hello @{msg.UserName}! Here's what I can do for you! Commands: hello, whisper, summon, find, echo, mock, pmock, cmock, about", true);
+                    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"Hello @{msg.UserName}! Here's what I can do for you! Commands: hello, whisper, summon, find, echo, mock, pmock, cmock, userstats, about", true);
                     await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, "You can access my commands globally typing '^<command>' or by whispering me a command.", true);
                 }
                 if (command.Equals("about"))
@@ -104,7 +105,7 @@ namespace Carl.Dan
 
         private async Task HandleEcho(ChatMessage msg)
         {
-            if (!HasPermissions(msg.UserId))
+            if (!CommandUtils.HasAdvancePermissions(msg.UserId))
             {
                 await CommandUtils.SendAccessDenied(m_firehose, msg.ChannelId, msg.UserName, true);
                 return;
@@ -125,11 +126,18 @@ namespace Carl.Dan
                 return;
             }
 
+            int? userId = await MixerUtils.GetUserId(userName);
+            if(!userId.HasValue)
+            {
+                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"That's not right, I had trouble getting the user id. Try again later.", msg.IsWhisper);
+                return;
+            }
+
             // Find the user.
-            List<int> channelIds = CreeperDan.GetActiveChannelIds(userName);
+            List<int> channelIds = CreeperDan.GetActiveChannelIds(userId.Value);
             if (channelIds == null)
             {
-                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I can't find {userName} in any channels right now. (maybe they're lurking?)", msg.IsWhisper);
+                await CommandUtils.SendCantFindUser(m_firehose, msg, userName);
             }
             else
             {
@@ -139,6 +147,7 @@ namespace Carl.Dan
                     // Build the string.
                     bool first = true;
                     string output = $"I found {userName} in the following channels, ";
+                    int count = 0;
                     foreach (int i in channelIds)
                     {
                         if(!first)
@@ -147,12 +156,13 @@ namespace Carl.Dan
                         }
                         first = false;
 
-                        output += $"{await MixerUtils.GetChannelName(i)}";
+                        output += $"@{await MixerUtils.GetChannelName(i)}";
+                        count++;
 
                         // Check for the max message length.
                         if (output.Length > 330)
                         {
-                            output += ", and many more.";
+                            output += $", and {channelIds.Count - count} more.";
                             break;
                         }
                     }
@@ -179,17 +189,17 @@ namespace Carl.Dan
             int whispers = await CommandUtils.GlobalWhisper(m_firehose, userName, $"{msg.UserName} says: {message}");
             if (whispers == 0)
             {
-                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I didn't find {userName} in any channels to whisper. (maybe they're lurking?)", msg.IsWhisper);
+                await CommandUtils.SendCantFindUser(m_firehose, msg, userName);
             }
             else
             {
-                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I send your message to {userName} in {whispers} channels", msg.IsWhisper);
+                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I sent your message to {userName} in {whispers} channels", msg.IsWhisper);
             }
         }
 
         private async Task HandleClearMock(ChatMessage msg)
         {
-            if (!HasPermissions(msg.UserId))
+            if (!CommandUtils.HasAdvancePermissions(msg.UserId))
             {
                 await CommandUtils.SendAccessDenied(m_firehose, msg.ChannelId, msg.UserName, true);
                 return;
@@ -203,7 +213,7 @@ namespace Carl.Dan
 
         private async Task HandleMockToggle(ChatMessage msg, bool isPrivate)
         {
-            if (!HasPermissions(msg.UserId))
+            if (!CommandUtils.HasAdvancePermissions(msg.UserId))
             {
                 await CommandUtils.SendAccessDenied(m_firehose, msg.ChannelId, msg.UserName, true);
                 return;
@@ -263,11 +273,6 @@ namespace Carl.Dan
             return;
         }
 
-        private bool HasPermissions(int userId)
-        {
-            return userId == 213923 || userId == 354879;
-        }
-
         private async void CheckForMock(ChatMessage msg)
         {
             if(m_mockDict.ContainsKey(msg.UserId))
@@ -323,11 +328,11 @@ namespace Carl.Dan
                 int whispers = await CommandUtils.GlobalWhisper(m_firehose, summonUserName, $"{msg.UserName} summons you to @{channelName}'s channel! https://mixer.com/{channelName}");
                 if (whispers == 0)
                 {
-                    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I couldn't find {summonUserName} in any channels to summon. (maybe they're lurking?)", msg.IsWhisper);
+                    await CommandUtils.SendCantFindUser(m_firehose, msg, summonUserName);                
                 }
                 else
                 {
-                    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I whisper summon to {summonUserName} in {whispers} channels", msg.IsWhisper);
+                    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I whisper summoned {summonUserName} in {whispers} channels", msg.IsWhisper);
                 }
             }
         }
