@@ -35,7 +35,7 @@ namespace Carl
     class Carl : ICarl
     {
         int m_viewerCountLimit = 5;   // The number of viewers a channel must have (inclusive) to be picked up.
-        int m_workerLimit = 20;
+        int m_workerLimit = 10;
         int m_workMasterTimeMs = 2000;
 
         List<int> m_channelOverrides = null; //= new List<int>(){ 153416 };
