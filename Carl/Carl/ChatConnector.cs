@@ -351,10 +351,7 @@ namespace Carl
                     if(!authValue.Value<bool>())
                     {
                         // The auth failed, disconnect the session.
-                        ThreadPool.QueueUserWorkItem((object o) =>
-                        {
-                            UpdateStatus(ChatState.Disconnected, true);
-                        });                        
+                        var _ignored = Task.Run(() => UpdateStatus(ChatState.Disconnected, true)).ConfigureAwait(false);                       
                     }
                 }
             }

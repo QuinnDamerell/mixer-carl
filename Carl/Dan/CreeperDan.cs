@@ -32,7 +32,7 @@ namespace Carl.Dan
             m_firehose.SubCommandListener(this);
             s_instance = this;
 
-            ThreadPool.QueueUserWorkItem((object o) => { ChannelUserCheckerThread(); });
+            var _ignored = Task.Run(() => ChannelUserCheckerThread());
         }
 
         public static List<int> GetActiveChannelIds(int userId)

@@ -47,7 +47,7 @@ namespace Carl.Dan
                 // See if we can handle it internally.
                 if (command.Equals("help") || command.Equals("commands"))
                 {
-                    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"Hello @{msg.UserName}! You can access my commands in any channel by typing '^<command>' or by whispering me a command. Commands: hello, whisper, summon, find, echo, mock, pmock, cmock, userstats, about", true);
+                    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"Hello @{msg.UserName}! You can access my commands in any channel by typing '^<command>' or by whispering me a command. Commands: hello, whisper, summon, find, echo, mock, pmock, cmock, userstats, msgstats, exit, about", true);
                 }
                 if (command.Equals("about"))
                 {
@@ -60,6 +60,10 @@ namespace Carl.Dan
                 else if (command.Equals("ping"))
                 {
                     await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, "Pong!", true);
+                }
+                else if (command.Equals("exit"))
+                {
+                    await HandleExit(msg);
                 }
                 else if (command.Equals("echo"))
                 {
@@ -116,6 +120,19 @@ namespace Carl.Dan
             }
         }
 
+        private async Task HandleExit(ChatMessage msg)
+        {
+            if (!CommandUtils.HasAdvancePermissions(msg.UserId))
+            {
+                await CommandUtils.SendAccessDenied(m_firehose, msg);
+                return;
+            }
+            await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"👋 Later! Powering down.", msg.IsWhisper);
+            // Give the message time to send.
+            await Task.Delay(1000);
+            Environment.Exit(-1);
+        }
+
         private async Task HandleFindCommand(ChatMessage msg)
         {
             string userName = CommandUtils.GetSingleWordArgument(msg.Text);
@@ -141,7 +158,7 @@ namespace Carl.Dan
             else
             {
                 // Go async to get the names.
-                ThreadPool.QueueUserWorkItem(async (object _) =>
+                var _ignored = Task.Run(async () => 
                 {
                     // Build the string.
                     bool first = true;
@@ -166,7 +183,7 @@ namespace Carl.Dan
                         }
                     }
                     await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, output, msg.IsWhisper);
-                });
+                }).ConfigureAwait(false);
             }
         }
 

@@ -87,9 +87,9 @@ namespace Carl
                 UpdateState(SimpleWebySocketState.Connected);
 
                 // Start the worker threads
-                ThreadPool.QueueUserWorkItem((object o) => { ReceiveThread(); });
-                ThreadPool.QueueUserWorkItem((object o) => { SendThread(); });
-
+                var _ignored = Task.Run(() => ReceiveThread()).ConfigureAwait(false);
+                var __ignored = Task.Run(() => SendThread()).ConfigureAwait(false);
+                
                 return true;
             }
             catch (Exception e)

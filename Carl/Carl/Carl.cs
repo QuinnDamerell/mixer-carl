@@ -171,11 +171,11 @@ namespace Carl
             if (newState == ChatState.Disconnected)
             {
                 int channelId = sender.GetChannelId();
-                ThreadPool.QueueUserWorkItem(async (object o) =>
+                var _ignored = Task.Run(async () => 
                 {
                     Logger.Error($"Chat ws disconnected due to ws error for channel {channelId}");
                     await RemoveChannel(channelId);
-                });
+                }).ConfigureAwait(false);
             }
         }
 
