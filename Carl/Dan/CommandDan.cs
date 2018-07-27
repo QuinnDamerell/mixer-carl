@@ -47,8 +47,7 @@ namespace Carl.Dan
                 // See if we can handle it internally.
                 if (command.Equals("help") || command.Equals("commands"))
                 {
-                    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"Hello @{msg.UserName}! Here's what I can do for you! Commands: hello, whisper, summon, find, echo, mock, pmock, cmock, userstats, about", true);
-                    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, "You can access my commands globally typing '^<command>' or by whispering me a command.", true);
+                    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"Hello @{msg.UserName}! You can access my commands in any channel by typing '^<command>' or by whispering me a command. Commands: hello, whisper, summon, find, echo, mock, pmock, cmock, userstats, about", true);
                 }
                 if (command.Equals("about"))
                 {

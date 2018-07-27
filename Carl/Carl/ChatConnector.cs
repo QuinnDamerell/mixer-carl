@@ -265,7 +265,16 @@ namespace Carl
                 string method = jObject["method"]?.ToString();
                 if(method != null && method.Equals("ping"))
                 {
-                    Logger.Info("received ping");
+                    Logger.Info("Received ping");
+                }
+                string type = jObject["type"]?.ToString();
+                if (type != null && type.Equals("reply"))
+                {
+                    string error = jObject["error"]?.ToString();
+                    if(!String.IsNullOrWhiteSpace(error))
+                    {
+                        Logger.Error("Error received from chat server. " + message);
+                    }
                 }
             }
         }

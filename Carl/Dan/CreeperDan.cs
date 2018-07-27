@@ -57,12 +57,7 @@ namespace Carl.Dan
         {
             if(command.Equals("userstats"))
             {
-                if(!CommandUtils.HasAdvancePermissions(msg.UserId))
-                {
-                    await CommandUtils.SendAccessDenied(m_firehose, msg);
-                    return;
-                }
-                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I'm currently tracking {m_currentViewerCount} viewers.", msg.IsWhisper);
+                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I'm currently tracking {m_currentViewerCount.ToString("n0")} viewers on {m_channelTracker.Count.ToString("n0")} channels.", msg.IsWhisper);
             }
         }
 

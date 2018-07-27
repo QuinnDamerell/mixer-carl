@@ -35,7 +35,12 @@ namespace Carl
             c.SubFirehose(hose);
             CreeperDan creeperDan = new CreeperDan(hose);
 
-            while(true)
+            // Setup message Dan
+            hose = new Firehose(c);
+            c.SubFirehose(hose);
+            MessagesDan messagesDan = new MessagesDan(hose);
+
+            while (true)
             {
                 Thread.Sleep(500000);
             }

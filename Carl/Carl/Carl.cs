@@ -225,7 +225,7 @@ namespace Carl
                     }
                 }
 
-                Logger.Info($"{connectedChannels}/{eligibleChannels} ({(eligibleChannels == 0 ? 0 : Math.Round(((double)connectedChannels / (double)eligibleChannels)*100, 2))}%) connected channels; tracking {CreeperDan.GetViewerCount()} viewers.");
+                Logger.Info($"{connectedChannels}/{eligibleChannels} ({(eligibleChannels == 0 ? 0 : Math.Round(((double)connectedChannels / (double)eligibleChannels)*100, 2))}%) connected channels; tracking {CreeperDan.GetViewerCount().ToString("n0")} viewers.");
 
                 foreach (int id in toRemove)
                 {

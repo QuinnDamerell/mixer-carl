@@ -13,12 +13,12 @@ namespace Carl
 
         public static void Error(string message)
         {
-            Log($"Err: {message}");
+            Log($"Error!: {message}");
         }
 
         public static void Error(string message, Exception e)
         {
-            Log($"Err: {message}, exception:{(e == null ? "no message" : e.Message)}");
+            Log($"Error!: {message}, exception:{(e == null ? "no message" : e.Message)}");
         }
 
         private static void Log(string message)

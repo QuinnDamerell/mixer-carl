@@ -99,14 +99,21 @@ namespace Carl.Dan
         static public async Task<bool> SendResponse(IFirehose firehose, int channelId, string userName, string message, bool whisper)
         {
             Logger.Info($"Sent {(whisper ? "whisper" : "message")} to {userName}: {message}");
+            bool success = false;
             if (whisper)
             {
-                return await firehose.SendWhisper(channelId, userName, message);
+                success = await firehose.SendWhisper(channelId, userName, message);
             }
             else
             {
-                return await firehose.SendMessage(channelId, message);
+                success = await firehose.SendMessage(channelId, message);
             }
+
+            if(!success)
+            {
+                Logger.Error($"Failed to send message '{message}' to {userName} in channel {channelId}");
+            }
+            return success;
         }
 
         public static bool HasAdvancePermissions(int userId)
