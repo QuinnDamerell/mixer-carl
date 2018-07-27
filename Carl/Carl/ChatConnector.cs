@@ -24,14 +24,12 @@ namespace Carl
         public event ChatWsStateChanged OnChatWsStateChanged;
 
         // Keep 500 ms between sends to avoid rate limiting.
-        TimeSpan c_minTimeBetweenSends = new TimeSpan(0, 0, 0, 0, 500); 
+        TimeSpan c_minTimeBetweenSends = new TimeSpan(0, 0, 0, 0, 600); 
 
         const int c_mixerMaxMessageLength = 360;
 
         private int m_channelId;
         private int m_userId;
-        private string m_oauthToken;
-        private HttpClient m_client = new HttpClient();
         SimpleWebySocket m_ws;
         ChatState m_state = ChatState.None;
         ICarl m_callback;
@@ -52,14 +50,12 @@ namespace Carl
             public List<string> arguments = new List<string>();
         }
 
-        public ChatConnector(int userId, string oAuthToken, int channelId, ICarl callback)
+        public ChatConnector(int userId, int channelId, ICarl callback)
         {
             m_channelId = channelId;
             m_userId = userId;
-            m_oauthToken = oAuthToken;
             m_callback = callback;
             m_rand = new Random(DateTime.Now.Millisecond);
-            m_client.DefaultRequestHeaders.Add("Client-ID", "Karl");
         }
 
         public int GetChannelId()
@@ -405,13 +401,9 @@ namespace Carl
 
         async Task<ChatServerDetails> GetChatServerDetails()
         {
-            HttpRequestMessage request = new HttpRequestMessage();
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", m_oauthToken);
-            request.RequestUri = new Uri($"https://mixer.com/api/v1/chats/{m_channelId}");
             try
-            {
-                HttpResponseMessage response = await m_client.SendAsync(request);
-                string res = await response.Content.ReadAsStringAsync();
+            {               
+                string res = await MixerUtils.MakeMixerHttpRequest($"api/v1/chats/{m_channelId}");
                 return JsonConvert.DeserializeObject<ChatServerDetails>(res);
             }
             catch (Exception e)

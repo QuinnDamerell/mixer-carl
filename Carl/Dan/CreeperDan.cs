@@ -165,7 +165,6 @@ namespace Carl.Dan
         const int c_sleepyTimeBetweenChannelChecksMs = 100;
         const int c_minSleepyTimeBetweenRoundsSeconds = 30;
 
-        HttpClient m_client = new HttpClient();
         ConcurrentDictionary<int, int> m_channelTracker = new ConcurrentDictionary<int, int>();
 
         public void OnChatConnectionChanged(int channelId, ChatConnectionState state)
@@ -184,7 +183,6 @@ namespace Carl.Dan
         private async void ChannelUserCheckerThread()
         {
             // Setup
-            m_client.DefaultRequestHeaders.Add("Client-ID", "Karl");
             m_previousRoundUpdateStartTime = DateTime.Now;
             m_roundUpdateStartTime = DateTime.Now;
 
@@ -272,36 +270,14 @@ namespace Carl.Dan
         {
             const int c_limit = 100;
             List<int> knownUsers = new List<int>();
-            int rateLimitBackoff = 0;
             int pageCount = 0;
-            while (true)
+            while (pageCount > c_channelUserPageLimit)
             {
-                // Limit ourselves
-                if (pageCount > c_channelUserPageLimit)
-                {
-                    break;
-                }
-
                 // Setup the call
-                HttpRequestMessage request = new HttpRequestMessage();
-                request.RequestUri = new Uri($"https://mixer.com/api/v1/chats/{channelId}/users?limit={c_limit}&page={pageCount}&order=userName:asc&fields=userId");
-
                 try
                 {
-                    HttpResponseMessage response = await m_client.SendAsync(request);
-                    if (response.StatusCode == (HttpStatusCode)429)
-                    {
-                        // If we get rate limited wait for a while.
-                        rateLimitBackoff++;
-                        await Task.Delay(50 * rateLimitBackoff);
-
-                        // And try again.
-                        continue;
-                    }
-                    rateLimitBackoff = 0;
-
                     // Get the response
-                    string res = await response.Content.ReadAsStringAsync();
+                    string res = await MixerUtils.MakeMixerHttpRequest($"api/v1/chats/{channelId}/users?limit={c_limit}&page={pageCount}&order=userName:asc&fields=userId");
 
                     // Parse it.
                     List<ChatUser> users = JsonConvert.DeserializeObject<List<ChatUser>>(res);
@@ -326,7 +302,6 @@ namespace Carl.Dan
 
                 pageCount++;
             }
-
             return knownUsers;
         }  
 

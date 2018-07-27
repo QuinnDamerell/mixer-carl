@@ -22,13 +22,11 @@ namespace Carl
         public event ChannelOnlineUpdate OnChannelOnlineUpdate;
 
         const int m_threadSleepTimeMs = 15000;
-        HttpClient m_client = new HttpClient();
         List<int> m_channelOverrides;
 
         public ChannelDiscover(List<int> channelOverrides = null)
         {
             m_channelOverrides = channelOverrides;
-            m_client.DefaultRequestHeaders.Add("Client-ID", "Karl");
         }
 
         public void Run()
@@ -86,29 +84,13 @@ namespace Carl
                 ViewersCurrent = 300
             });            
 
-            int rateLimitBackoff = 0;
             int i = 0;
             while (i < 1000)
             {
-                HttpRequestMessage request = new HttpRequestMessage();
-                request.RequestUri = new Uri($"https://mixer.com/api/v1/channels?limit=100&page={i}&order=online:desc,viewersCurrent:desc&fields=token,id,viewersCurrent");
-                string res;
                 try
                 {
-                    HttpResponseMessage response = await m_client.SendAsync(request);
-                    if (response.StatusCode == (HttpStatusCode)429)
-                    {
-                        // If we get rate limited wait for a while.
-                        rateLimitBackoff++;
-                        await Task.Delay(200 * rateLimitBackoff);
-
-                        // And try again.
-                        continue;
-                    }
-                    rateLimitBackoff = 0;
-
-                    res = await response.Content.ReadAsStringAsync();
-                    List<MixerChannel> chan = JsonConvert.DeserializeObject<List<MixerChannel>>(res);
+                    string response = await MixerUtils.MakeMixerHttpRequest($"api/v1/channels?limit=100&page={i}&order=online:desc,viewersCurrent:desc&fields=token,id,viewersCurrent");
+                    List<MixerChannel> chan = JsonConvert.DeserializeObject<List<MixerChannel>>(response);
                     channels.AddRange(chan);
 
                     // If we hit the end of the list of channels with viewers, return.

@@ -69,6 +69,9 @@ namespace Carl
                 }
             }
 
+            // Set the oauth token
+            MixerUtils.SetMixerCreds(m_chatBotoAuthToken);
+
             Logger.Info("Setting up discovery");
             // Start the discovery process.
             ChannelDiscover dis = new ChannelDiscover(m_channelOverrides);
@@ -130,7 +133,7 @@ namespace Carl
                 }
 
                 // We have a channel id we should connect, try to do it.
-                ChatConnector conn = new ChatConnector(m_chatBotUserId, m_chatBotoAuthToken, channelId, this);
+                ChatConnector conn = new ChatConnector(m_chatBotUserId, channelId, this);
 
                 bool added = false;
                 if ((await conn.Connect()))
