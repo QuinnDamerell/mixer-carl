@@ -23,6 +23,9 @@ namespace Carl
         public delegate void ChatWsStateChanged(ChatConnector sender, ChatState newState, bool wasError);
         public event ChatWsStateChanged OnChatWsStateChanged;
 
+        // Keep 500 ms between sends to avoid rate limiting.
+        TimeSpan c_minTimeBetweenSends = new TimeSpan(0, 0, 0, 0, 500); 
+
         const int c_mixerMaxMessageLength = 360;
 
         private int m_channelId;
@@ -93,6 +96,7 @@ namespace Carl
             Random rand = new Random();
             string endpoint = details.endpoints[rand.Next(0, details.endpoints.Count)];
             m_ws = new SimpleWebySocket(this, endpoint);
+            m_ws.MinTimeBetweenSends = c_minTimeBetweenSends;
 
             Logger.Info($"Connecting to channel {m_channelId} on server {endpoint}...");
             if (!await m_ws.Connect())

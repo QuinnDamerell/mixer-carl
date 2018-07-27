@@ -27,13 +27,16 @@ namespace Carl
     class SendQueueItem
     {
         public string Message;
-        public SemaphoreSlim Mutex = new SemaphoreSlim(0);
+        public SemaphoreSlim Mutex;
         public bool Sent = false;
     }
 
     public class SimpleWebySocket
     {
-        const int c_sendWaitTimeoutMs = 30000;
+        // Allows you to limit how many message are sent per time period.
+        public TimeSpan MinTimeBetweenSends = new TimeSpan(0,0,0,0,0);
+
+        const int c_sendWaitTimeoutMs = 30000;       
 
         string m_url;
         ClientWebSocket m_ws;
@@ -105,19 +108,29 @@ namespace Carl
             await InternalDisconnect(WebSocketCloseStatus.NormalClosure, "UserClosed", true);
         }
 
-        public async Task<bool> Send(string message)
+        public async Task<bool> Send(string message, bool blockUntilSent = false)
         {
             // Queue the request.
             SendQueueItem item = new SendQueueItem()
             {
                 Message = message
             };
+
+            if(blockUntilSent)
+            {
+                item.Mutex = new SemaphoreSlim(0);
+            }
+
             m_sendQueue.Add(item);
 
-            // Wait on the item to be sent.
-            await item.Mutex.WaitAsync(c_sendWaitTimeoutMs);
+            if (blockUntilSent)
+            {
+                // Wait on the item to be sent.
+                await item.Mutex.WaitAsync(c_sendWaitTimeoutMs);
+                return item.Sent;
+            }
 
-            return item.Sent;
+            return true;            
         }
 
         private async void SendThread()
@@ -140,9 +153,16 @@ namespace Carl
                 ClientWebSocket ws = m_ws;
                 if (ws == null)
                 {
-                    item.Mutex.Release();
+                    item.Mutex?.Release();
                     break;
                 }
+
+                if(m_sendQueue.Count > 50)
+                {
+                    Logger.Error($"Web socket send queue is looonnnggg {m_sendQueue.Count}.");
+                }
+
+                DateTime sendStart = DateTime.Now;
 
                 // Send the message.
                 try
@@ -154,13 +174,19 @@ namespace Carl
                 {
                     // If we failed to send, kill the connection.
                     await InternalDisconnect(WebSocketCloseStatus.NormalClosure);
-                    item.Mutex.Release();
+                    item.Mutex?.Release();
                     break;
                 }
 
                 // Indicate the message was sent.
                 item.Sent = true;
-                item.Mutex.Release();
+                item.Mutex?.Release();
+
+                double sleepyTimeMs = MinTimeBetweenSends.TotalMilliseconds - (DateTime.Now - sendStart).TotalMilliseconds;
+                if (sleepyTimeMs > 0)
+                {
+                    await Task.Delay((int)sleepyTimeMs);
+                }
             }
         }
 
