@@ -216,7 +216,6 @@ namespace Carl
                     {
                         return;
                     }
-                    Logger.Info($"Websocket for channel {m_channelId} disconnecting.");
                     break;
             }
             m_state = newState;

@@ -192,7 +192,7 @@ namespace Carl
 
         private async void ReceiveThread()
         {
-            var buffer = new byte[1024];
+            var buffer = new byte[2024];
             string message = String.Empty;
 
             while (State == SimpleWebySocketState.Connected)
@@ -210,6 +210,12 @@ namespace Carl
                 try
                 {
                     result = await ws.ReceiveAsync(new ArraySegment<byte>(buffer), m_cancelToken.Token);
+                }
+                catch(TaskCanceledException)
+                {
+                    // This happens when the socket is shutting down, so don't log or worry about it.
+                    await InternalDisconnect(WebSocketCloseStatus.NormalClosure);
+                    break;
                 }
                 catch (Exception ex)
                 {

@@ -174,7 +174,7 @@ namespace Carl
                 var _ignored = Task.Run(async () => 
                 {
                     Logger.Error($"Chat ws disconnected due to ws error for channel {channelId}");
-                    await RemoveChannel(channelId);
+                    await RemoveChannel(channelId, "websocket error.");
                 }).ConfigureAwait(false);
             }
         }
@@ -229,14 +229,14 @@ namespace Carl
 
                 foreach (int id in toRemove)
                 {
-                    await RemoveChannel(id);
+                    await RemoveChannel(id, "the channel is offline or under the viewer limit.");
                 }
 
                 await Task.Delay(m_workMasterTimeMs);
             }
         }
 
-        private async Task RemoveChannel(int channelId)
+        private async Task RemoveChannel(int channelId, string reason)
         {
             ChannelEntry entry;
             lock (m_channelMap)
@@ -255,7 +255,7 @@ namespace Carl
 
             if (entry.Chat != null)
             {
-                Logger.Info($"Disconnecting channel {channelId}");
+                Logger.Info($"Disconnecting channel {channelId} because {reason}");
                 entry.Chat.OnChatWsStateChanged -= Chat_OnChatWsStateChanged;
                 await entry.Chat.Disconnect();
             }
