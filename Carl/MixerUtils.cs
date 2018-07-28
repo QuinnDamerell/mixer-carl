@@ -14,6 +14,8 @@ namespace Carl
     {
         static HttpClient s_client = new HttpClient();
         static ConcurrentDictionary<int, string> s_channelNames = new ConcurrentDictionary<int, string>();
+        static ConcurrentDictionary<int, string> s_userIds = new ConcurrentDictionary<int, string>();
+        static ConcurrentDictionary<string, int> s_userNames = new ConcurrentDictionary<string, int>();
 
         class MixerChannelApi
         {
@@ -23,7 +25,7 @@ namespace Carl
 
         class MixerUserApi
         {
-            public string token;
+            public string username;
         }
 
         public static void Init()
@@ -57,6 +59,11 @@ namespace Carl
                 return null;
             }
 
+            if(String.IsNullOrWhiteSpace(channelName))
+            {
+                return null;
+            }
+
             // Try to set it in the cache
             s_channelNames.TryAdd(channelId, channelName);
             return channelName;
@@ -69,16 +76,58 @@ namespace Carl
 
         public async static Task<int?> GetUserId(string userName)
         {
+            int userId = 0;
+            if(s_userNames.TryGetValue(userName, out userId))
+            {
+                return userId;
+            }
+
             try
             {
                 string res = await MakeMixerHttpRequest($"api/v1/channels/{userName}");
-                return JsonConvert.DeserializeObject<MixerChannelApi>(res).userId;
+                userId = JsonConvert.DeserializeObject<MixerChannelApi>(res).userId;
             }
             catch (Exception e)
             {
-                Logger.Error($"Failed to get user name from API: {userName}", e);
+                Logger.Error($"Failed to get user id from API: {userName}", e);
                 return null;
             }
+
+            if(userId <= 0)
+            {
+                return null;
+            }
+
+            s_userNames.TryAdd(userName, userId);
+            return userId;
+        }
+
+        public async static Task<string> GetUserName(int userId)
+        {
+            string userName = null;
+            if (s_userIds.TryGetValue(userId, out userName))
+            {
+                return userName;
+            }
+
+            try
+            {
+                string res = await MakeMixerHttpRequest($"api/v1/users/{userId}");
+                userName = JsonConvert.DeserializeObject<MixerUserApi>(res).username;
+            }
+            catch (Exception e)
+            {
+                Logger.Error($"Failed to get user name from API: {userId}", e);
+                return null;
+            }
+
+            if(String.IsNullOrWhiteSpace(userName))
+            {
+                return null;
+            }
+
+            s_userIds.TryAdd(userId, userName);
+            return userName;
         }
 
         public async static Task<string> MakeMixerHttpRequest(string url)
@@ -95,12 +144,7 @@ namespace Carl
                 {
                     // If we get rate limited wait for a while.
                     rateLimitBackoff++;
-                    await Task.Delay(50 * rateLimitBackoff);
-
-                    if(rateLimitBackoff > 2)
-                    {
-                        Logger.Error($"Mixer rate limit is at {rateLimitBackoff}");
-                    }
+                    await Task.Delay(100 * rateLimitBackoff);
 
                     // And try again.
                     continue;

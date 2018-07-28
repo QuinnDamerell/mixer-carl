@@ -130,7 +130,7 @@ namespace Carl.Dan
             if(valueToAdd != -1)
             {
                 list.Add(valueToAdd);
-                if(list.Count > 10)
+                if(list.Count > 5)
                 {
                     list.RemoveAt(0);
                 }

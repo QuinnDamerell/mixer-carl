@@ -261,3 +261,6 @@ __pycache__/
 *.pyc
 /Carl/Properties/launchSettings.json
 /CarlBuild/bins/*
+/Carl/UserNotifications.json
+/Carl/Properties/launchSettings.json
+/Carl/UserFriends.json

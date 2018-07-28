@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Carl.Dan;
 
 namespace Carl
 {
@@ -19,6 +20,7 @@ namespace Carl
         public int UserId;
         public bool IsJoin;
         public int ChannelId; // For co-streams this tells you which they joined.
+        public bool IsFromCreeperDan = false;
     }
 
     public enum ChatConnectionState

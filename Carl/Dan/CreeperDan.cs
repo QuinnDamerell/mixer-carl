@@ -23,10 +23,12 @@ namespace Carl.Dan
         DateTime m_previousRoundUpdateStartTime = DateTime.Now;
         int m_currentViewerCount = 0;
         int m_viewCountAccumlator = 0;
+        ICarl m_userActivityCallback;
 
-        public CreeperDan(IFirehose firehose)
+        public CreeperDan(IFirehose firehose, ICarl userActivityCallback)
             : base(firehose)
         {
+            m_userActivityCallback = userActivityCallback;
             m_firehose.SubChatConnectionChanged(this);
             m_firehose.SubUserActivity(this);
             m_firehose.SubCommandListener(this);
@@ -69,28 +71,28 @@ namespace Carl.Dan
             if (m_userMap.TryGetValue(userId, out entry))
             {
                 // The user exists, update the active list.
+                List<int> toRemove = new List<int>();
                 lock (entry.ActiveChannels)
                 {
-                    List<int> remove = new List<int>();
                     foreach(var pair in entry.ActiveChannels)
                     {
                         // Check if the users is older than the start of the previous round.
                         // If that's true, the user isn't in the channel anymore.
                         if ((pair.Value - m_previousRoundUpdateStartTime).TotalMinutes < 0)
                         {
-                            remove.Add(pair.Key);
+                            toRemove.Add(pair.Key);
                         }
                         else
                         {
                             activeChannels.Add(pair.Key);
                         }
-                    }
+                    }             
+                }
 
-                    // Clean up.
-                    foreach(int i in remove)
-                    {
-                        entry.ActiveChannels.Remove(i);
-                    }
+                // Clean up old channels.
+                foreach (int chan in toRemove)
+                {
+                    RemoveUserFromChannel(userId, chan, true);
                 }
                 return activeChannels.Count == 0 ? null : activeChannels;
             }
@@ -99,18 +101,23 @@ namespace Carl.Dan
 
         public void OnUserActivity(UserActivity activity)
         {
+            if(activity.IsFromCreeperDan)
+            {
+                return;
+            }
+
             if(activity.IsJoin)
             {
                 // Make sure we know the user is in here.
-                AddOrUpdateUserToChannel(activity.UserId, activity.ChannelId);
+                AddOrUpdateUserToChannel(activity.UserId, activity.ChannelId, false);
             }
             else
             {
-                RemoveUserFromChannel(activity.UserId, activity.ChannelId);
+                RemoveUserFromChannel(activity.UserId, activity.ChannelId, false);
             }
         }
 
-        private void AddOrUpdateUserToChannel(int userId, int channelId)
+        private void AddOrUpdateUserToChannel(int userId, int channelId, bool fireNotificaiton)
         {
             UserActivtyEntry entry = null;
             while (true)
@@ -123,7 +130,7 @@ namespace Carl.Dan
                         // Set or update the join time.
                         entry.ActiveChannels[channelId] = DateTime.Now;
                     }
-                    return;
+                    break;
                 }
                 else
                 {
@@ -141,12 +148,17 @@ namespace Carl.Dan
                         // Someone else already added it, try again.
                         continue;
                     }
-                    return;
+                    break;
                 }
+            }
+
+            if (fireNotificaiton)
+            {
+                FireUserActivity(userId, channelId, true);
             }
         }
 
-        private void RemoveUserFromChannel(int userId, int channelId)
+        private void RemoveUserFromChannel(int userId, int channelId, bool fireNotificaiton)
         {
             UserActivtyEntry entry = null;
             if (m_userMap.TryGetValue(userId, out entry))
@@ -155,8 +167,24 @@ namespace Carl.Dan
                 lock (entry.ActiveChannels)
                 {
                     entry.ActiveChannels.Remove(channelId);
-                }
+                }                
             }
+
+            if(fireNotificaiton)
+            {
+                FireUserActivity(userId, channelId, false);
+            }
+        }
+
+        private void FireUserActivity(int userId, int channelId, bool isJoined)
+        {
+            m_userActivityCallback.OnUserActivity(new UserActivity()
+            {
+                ChannelId  = channelId,
+                UserId = userId,
+                IsFromCreeperDan = true,
+                IsJoin = isJoined
+            });
         }
 
         #region User Finder
@@ -256,7 +284,7 @@ namespace Carl.Dan
             m_viewCountAccumlator += viewers.Count;
             foreach (int viewer in viewers)
             {
-                AddOrUpdateUserToChannel(viewer, channelId);
+                AddOrUpdateUserToChannel(viewer, channelId, true);
             }
             return true;
         }

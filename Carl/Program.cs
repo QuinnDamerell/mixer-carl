@@ -33,12 +33,17 @@ namespace Carl
             // Set up the Creeper Dan
             hose = new Firehose(c);
             c.SubFirehose(hose);
-            CreeperDan creeperDan = new CreeperDan(hose);
+            CreeperDan creeperDan = new CreeperDan(hose, c);
 
             // Setup message Dan
             hose = new Firehose(c);
             c.SubFirehose(hose);
             MessagesDan messagesDan = new MessagesDan(hose);
+
+            // Notification Dan
+            hose = new Firehose(c);
+            c.SubFirehose(hose);
+            FriendlyDan friendlyDan = new FriendlyDan(hose);
 
             while (true)
             {

@@ -9,14 +9,27 @@ namespace Carl.Dan
     {
         static public async Task<int> GlobalWhisper(IFirehose firehose, string userName, string message)
         {
-            // Find the userId.
             int? userId = await MixerUtils.GetUserId(userName);
-            if(!userId.HasValue)
+            if (!userId.HasValue)
             {
                 return 0;
             }
+            return await GlobalWhisper(firehose, userId.Value, userName, message);
+        }
 
-            List<int> channelIds = CreeperDan.GetActiveChannelIds(userId.Value);
+        static public async Task<int> GlobalWhisper(IFirehose firehose, int userId, string message)
+        {
+            string userName = await MixerUtils.GetUserName(userId);
+            if (String.IsNullOrWhiteSpace(userName))
+            {
+                return 0;
+            }
+            return await GlobalWhisper(firehose, userId, userName, message);
+        }
+
+        static public async Task<int> GlobalWhisper(IFirehose firehose, int userId, string userName, string message)
+        {
+            List<int> channelIds = CreeperDan.GetActiveChannelIds(userId);
             if (channelIds == null)
             {
                 return 0;
@@ -81,6 +94,16 @@ namespace Carl.Dan
             return GetCommandBody(body);
         }
 
+        static public string GetSecondSingleWordArgument(string fullCommand)
+        {
+            string body = GetCommandBody(fullCommand);
+            if (body == null)
+            {
+                return null;
+            }
+            return GetSingleWordArgument(body);
+        }
+
         static public async Task<bool> SendAccessDenied(IFirehose firehose, ChatMessage msg, bool forceWhisper = false)
         {
             return await SendAccessDenied(firehose, msg.ChannelId, msg.UserName, msg.IsWhisper || forceWhisper);
@@ -94,6 +117,16 @@ namespace Carl.Dan
         public static async Task<bool> SendCantFindUser(IFirehose m_firehose, ChatMessage msg, string failedToFindUserName)
         {
             return await SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"It doesn't look like {failedToFindUserName} is on Mixer right now. (Maybe they're lurking?)", msg.IsWhisper);
+        }
+
+        public static async Task<bool> SendMixerUserNotFound(IFirehose m_firehose, ChatMessage msg, string failedToFindUserName)
+        {
+            return await SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I can't find {failedToFindUserName} on Mixer. Did you spell their name correctly? 😕", msg.IsWhisper);
+        }
+
+        static public async Task<bool> SendResponse(IFirehose firehose, ChatMessage msg, string message, bool forceWhisper = false)
+        {
+            return await SendResponse(firehose, msg.ChannelId, msg.UserName, message, msg.IsWhisper || forceWhisper);
         }
 
         static public async Task<bool> SendResponse(IFirehose firehose, int channelId, string userName, string message, bool whisper)

@@ -44,10 +44,16 @@ namespace Carl.Dan
                 }
                 command = command.ToLower();
 
-                // See if we can handle it internally.
-                if (command.Equals("help") || command.Equals("commands"))
+                // Filter short commands.
+                if(command.Length < 3)
                 {
-                    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"Hello @{msg.UserName}! You can access my commands in any channel by typing '^<command>' or by whispering me a command. Commands: hello, whisper, summon, find, echo, mock, pmock, cmock, userstats, msgstats, exit, about", true);
+                    return;
+                }
+
+                // See if we can handle it internally.
+                if (command.Equals("help") || command.Equals("command") || command.Equals("commands"))
+                {
+                    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"Hello @{msg.UserName}! You can access my commands in any channel by typing '^<command>' or by whispering me a command. Commands: hello, whisper, summon, find, echo, friend, lurk, mock, pmock, cmock, userstats, msgstats, exit, about", true);
                 }
                 if (command.Equals("about"))
                 {
@@ -55,7 +61,12 @@ namespace Carl.Dan
                 }
                 else if (command.Equals("hello") | command.Equals("hi"))
                 {
-                    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"👋 @{msg.UserName}", msg.IsWhisper);
+                    bool whisper = true;
+                    if(CommandUtils.HasAdvancePermissions(msg.UserId))
+                    {
+                        whisper = msg.IsWhisper;
+                    }
+                    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"👋 @{msg.UserName}", whisper);
                 }
                 else if (command.Equals("ping"))
                 {
@@ -209,7 +220,7 @@ namespace Carl.Dan
             }
             else
             {
-                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I sent your message to {userName} in {whispers} channels", msg.IsWhisper);
+                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I sent your message to {userName} in {whispers} channels", true);
             }
         }
 
