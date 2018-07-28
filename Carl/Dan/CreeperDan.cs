@@ -161,7 +161,7 @@ namespace Carl.Dan
 
         #region User Finder
 
-        const int c_channelUserPageLimit = 50;
+        const int c_channelUserPageLimit = 100;
         const int c_sleepyTimeBetweenChannelChecksMs = 100;
         const int c_minSleepyTimeBetweenRoundsSeconds = 30;
 
@@ -271,7 +271,7 @@ namespace Carl.Dan
             const int c_limit = 100;
             List<int> knownUsers = new List<int>();
             int pageCount = 0;
-            while (pageCount > c_channelUserPageLimit)
+            while (pageCount < c_channelUserPageLimit)
             {
                 // Setup the call
                 try
