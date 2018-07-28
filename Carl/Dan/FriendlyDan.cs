@@ -152,7 +152,7 @@ namespace Carl.Dan
                 string secondaryCommand = CommandUtils.GetSingleWordArgument(msg.Text);
                 if(secondaryCommand == null || secondaryCommand.Equals("help"))
                 {
-                    await CommandUtils.SendResponse(m_firehose, msg, $"Friends allows me to notify you when people you know join Mixer channels. Friend sub commands: add, remove, find, list, clear, help.", true);
+                    await CommandUtils.SendResponse(m_firehose, msg, $"Friends allows me to notify you when people you know join Mixer channels. Friend sub commands: add, remove, find, list, lurk, clear, help.", true);
                     return;
                 }
                 if (secondaryCommand.Equals("add"))
@@ -174,6 +174,10 @@ namespace Carl.Dan
                 else if (secondaryCommand.Equals("find"))
                 {
                     await HandleFind(msg);
+                }
+                else if (secondaryCommand.Equals("lurk"))
+                {
+                    await HandleLurk(msg);
                 }
             }
             else if(command.Equals("lurk"))
