@@ -207,7 +207,7 @@ namespace Carl.Dan
                 {
                     friends = relation.Friends.ToList<int>();
                 }
-                output += CommandUtils.FormatUserIds(friends, 250);
+                output += await CommandUtils.FormatUserIds(friends, 250);
                 await CommandUtils.SendResponse(m_firehose, msg, output);
             }
             else
