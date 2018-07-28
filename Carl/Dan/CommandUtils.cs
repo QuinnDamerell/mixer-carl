@@ -142,6 +142,7 @@ namespace Carl.Dan
                 if(output.Length > lengthLimit - 20)
                 {
                     output += $" and {words.Count - i} more";
+                    break;
                 }
             }
             return output;
