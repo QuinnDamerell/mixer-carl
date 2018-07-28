@@ -47,6 +47,12 @@ namespace Carl.Dan
                 return;
             }
 
+            // Only look at joins.
+            if(!activity.IsJoin)
+            {
+                return;
+            }
+
             // See if we have a notification setup for this user.
             Relationships relation;
             if (m_currentSettings.Users.TryGetValue(activity.UserId, out relation))
