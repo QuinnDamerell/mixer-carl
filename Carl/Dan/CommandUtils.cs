@@ -104,6 +104,49 @@ namespace Carl.Dan
             return GetSingleWordArgument(body);
         }
 
+        public static async Task<string> FormatChannelIds(List<int> channelIds, int lengthLimit = int.MaxValue)
+        {
+            List<string> names = new List<string>();
+            foreach(int i in channelIds)
+            {
+                names.Add("@" + await MixerUtils.GetChannelName(i));
+            }
+            return FormatWordList(names, lengthLimit);
+        }
+
+        public static async Task<string> FormatUserIds(List<int> userIds, int lengthLimit = int.MaxValue)
+        {
+            List<string> names = new List<string>();
+            foreach (int i in userIds)
+            {
+                names.Add("@" + await MixerUtils.GetUserName(i));
+            }
+            return FormatWordList(names, lengthLimit);
+        }
+
+        public static string FormatWordList(List<string> words, int lengthLimit = int.MaxValue)
+        {
+            string output = "";
+            for(int i = 0; i < words.Count; i++)
+            {
+                if(i != 0)
+                {
+                    output += ", ";
+                }
+                if(words.Count > 1 && i + 1 == words.Count)
+                {
+                    output += "and ";
+                }
+                output += words[i];
+
+                if(output.Length > lengthLimit - 20)
+                {
+                    output += $" and {words.Count - i} more";
+                }
+            }
+            return output;
+        }
+
         static public async Task<bool> SendAccessDenied(IFirehose firehose, ChatMessage msg, bool forceWhisper = false)
         {
             return await SendAccessDenied(firehose, msg.ChannelId, msg.UserName, msg.IsWhisper || forceWhisper);

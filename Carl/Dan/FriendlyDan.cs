@@ -124,16 +124,7 @@ namespace Carl.Dan
                 {
                     foundSomeone = true;
                     output += $"{await MixerUtils.GetUserName(friendUserid)} is currently watching ";
-                    bool first = true;
-                    foreach(int channelId in channelIds)
-                    {
-                        if(!first)
-                        {
-                            output += ", ";
-                        }
-                        first = false;
-                        output += $"@{await MixerUtils.GetChannelName(channelId)}";                        
-                    }
+                    output += await CommandUtils.FormatChannelIds(channelIds, 50);
                 }
             }
             if(!foundSomeone)
@@ -211,18 +202,12 @@ namespace Carl.Dan
             if (m_currentSettings.Users.TryGetValue(msg.UserId, out relation))
             {
                 string output = "Your current friends are ";
-                bool first = true;
                 List<int> friends;
                 lock (relation.Friends)
                 {
                     friends = relation.Friends.ToList<int>();
                 }
-                foreach (int friendId in relation.Friends)
-                {
-                    if (!first) output += ", ";
-                    first = false;
-                    output += await MixerUtils.GetUserName(friendId);
-                }
+                output += CommandUtils.FormatUserIds(friends, 250);
                 await CommandUtils.SendResponse(m_firehose, msg, output);
             }
             else

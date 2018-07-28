@@ -172,27 +172,7 @@ namespace Carl.Dan
                 var _ignored = Task.Run(async () => 
                 {
                     // Build the string.
-                    bool first = true;
-                    string output = $"I found {userName} in the following channels, ";
-                    int count = 0;
-                    foreach (int i in channelIds)
-                    {
-                        if(!first)
-                        {
-                            output += ", ";
-                        }
-                        first = false;
-
-                        output += $"@{await MixerUtils.GetChannelName(i)}";
-                        count++;
-
-                        // Check for the max message length.
-                        if (output.Length > 330)
-                        {
-                            output += $", and {channelIds.Count - count} more.";
-                            break;
-                        }
-                    }
+                    string output = $"I found {userName} in the following channels: " + await CommandUtils.FormatChannelIds(channelIds, 250) + ".";
                     await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, output, msg.IsWhisper);
                 }).ConfigureAwait(false);
             }
