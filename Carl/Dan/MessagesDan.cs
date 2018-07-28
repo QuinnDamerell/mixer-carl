@@ -106,7 +106,7 @@ namespace Carl.Dan
             var topWords = m_wordHistory.GetTopValues(maxTopValues);
 
             // Build the output
-            string output = $"I'm processing {avgPerSec.ToString("n0")} msg/sec, {avgPerMin.ToString("n0")} msg/min. The top {maxTopValues} words on Mixer are currently: ";
+            string output = $"I'm processing {avgPerSec.ToString("n0", Carl.Culture)} msg/sec, {avgPerMin.ToString("n0", Carl.Culture)} msg/min. The top {maxTopValues} words on Mixer are currently: ";
             bool isFirst = true;
             foreach (var pair in topWords)
             {

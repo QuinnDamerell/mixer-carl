@@ -1,6 +1,7 @@
 ﻿using Carl.Dan;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,6 +35,8 @@ namespace Carl
 
     class Carl : ICarl
     {
+        public static CultureInfo Culture = new CultureInfo("en-US");
+
         int m_viewerCountLimit = 5;   // The number of viewers a channel must have (inclusive) to be picked up.
         int m_workerLimit = 10;
         int m_workMasterTimeMs = 2000;
@@ -228,7 +231,7 @@ namespace Carl
                     }
                 }
 
-                Logger.Info($"{connectedChannels}/{eligibleChannels} ({(eligibleChannels == 0 ? 0 : Math.Round(((double)connectedChannels / (double)eligibleChannels)*100, 2))}%) connected channels; tracking {CreeperDan.GetViewerCount().ToString("n0")} viewers.");
+                Logger.Info($"{connectedChannels}/{eligibleChannels} ({(eligibleChannels == 0 ? 0 : Math.Round(((double)connectedChannels / (double)eligibleChannels)*100, 2))}%) connected channels; tracking {CreeperDan.GetViewerCount().ToString("n0", Culture)} viewers.");
 
                 foreach (int id in toRemove)
                 {
