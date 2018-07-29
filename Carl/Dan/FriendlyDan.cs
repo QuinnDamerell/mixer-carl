@@ -88,7 +88,7 @@ namespace Carl.Dan
                     }
                     foreach (var userId in notifiy)
                     {
-                        await CommandUtils.GlobalWhisper(m_firehose, userId, $"{userName} has become active in @{channelName}");
+                        await CommandUtils.GlobalWhisper(m_firehose, userId, $"@{userName} has become active in @{channelName}");
                     }
                 }
 
