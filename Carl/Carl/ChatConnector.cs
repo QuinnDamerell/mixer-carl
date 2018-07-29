@@ -292,6 +292,19 @@ namespace Carl
             JToken dataObj = jObject["data"];
             if(dataObj != null)
             {
+                JToken channelValue = dataObj["channel"];
+                if (channelValue != null)
+                {
+                    msg.ChannelId = channelValue.Value<int>();
+                }
+
+                // Filter out any messages that aren't from this channel. This will happen when people co stream.
+                // The message will be picked up by another socket.
+                if(msg.ChannelId != m_channelId)
+                {
+                    return;
+                }
+
                 JToken messageVal = dataObj["message"];
                 if(messageVal != null)
                 {
@@ -320,12 +333,7 @@ namespace Carl
                 if (userIdValue != null)
                 {
                     msg.UserId = userIdValue.Value<int>();
-                }
-                JToken channelValue = dataObj["channel"];
-                if (channelValue != null)
-                {
-                    msg.ChannelId = channelValue.Value<int>();
-                }
+                } 
 
                 // Validate we got everything.
                 if (msg.UserId == 0 || msg.UserName == null || msg.Text == null || msg.ChannelId == 0)
@@ -386,6 +394,14 @@ namespace Carl
                 }
                 JToken channelValue = dataObj["originatingChannel"];
                 if (channelValue == null)
+                {
+                    return;
+                }
+
+                // Filter out any messages that aren't from this channel. This will happen when people co stream.
+                // The message will be picked up by another socket.
+                int channelId = channelValue.Value<int>();
+                if (channelId != m_channelId)
                 {
                     return;
                 }
