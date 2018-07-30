@@ -148,14 +148,14 @@ namespace Carl.Dan
             return output;
         }
 
-        static public async Task<bool> SendAccessDenied(IFirehose firehose, ChatMessage msg, bool forceWhisper = false)
+        static public async Task<bool> SendAccessDenied(IFirehose firehose, ChatMessage msg)
         {
-            return await SendAccessDenied(firehose, msg.ChannelId, msg.UserName, msg.IsWhisper || forceWhisper);
+            return await SendAccessDenied(firehose, msg.ChannelId, msg.UserName);
         }
 
-        static public async Task<bool> SendAccessDenied(IFirehose firehose, int channelId, string userName, bool whisper)
+        static public async Task<bool> SendAccessDenied(IFirehose firehose, int channelId, string userName)
         {
-            return await SendResponse(firehose, channelId, userName, "You don't have permissions to do that 🤨", whisper);
+            return await SendResponse(firehose, channelId, userName, "You don't have permissions to do that 🤨", true);
         }
 
         public static async Task<bool> SendCantFindUser(IFirehose m_firehose, ChatMessage msg, string failedToFindUserName)
@@ -168,7 +168,7 @@ namespace Carl.Dan
             return await SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I can't find {failedToFindUserName} on Mixer. Did you spell their name correctly? 😕", msg.IsWhisper);
         }
 
-        static public async Task<bool> SendResponse(IFirehose firehose, ChatMessage msg, string message, bool forceWhisper = false)
+        static public async Task<bool> SendResponse(IFirehose firehose, ChatMessage msg, string message, bool forceWhisper = true)
         {
             return await SendResponse(firehose, msg.ChannelId, msg.UserName, message, msg.IsWhisper || forceWhisper);
         }
@@ -196,6 +196,15 @@ namespace Carl.Dan
         public static bool HasAdvancePermissions(int userId)
         {
             return userId == 213923 || userId == 354879;
+        }
+
+        public static bool ShouldForceIsWhisper(ChatMessage msg)
+        {
+            if(HasAdvancePermissions(msg.UserId))
+            {
+                return msg.IsWhisper;
+            }
+            return true;
         }
     }
 }

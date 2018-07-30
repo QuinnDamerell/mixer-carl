@@ -183,7 +183,7 @@ namespace Carl.Dan
             Relationships relation;
             if (!m_currentSettings.Users.TryGetValue(msg.UserId, out relation))
             {
-                await CommandUtils.GlobalWhisper(m_firehose, msg.UserId, msg.UserName, "You don't have any friends.");
+                await CommandUtils.SendResponse(m_firehose, msg, "You don't have any friends.", true);
                 return;
             }
 
@@ -193,7 +193,7 @@ namespace Carl.Dan
             {
                 friends = relation.Friends.ToList<int>();
             }
-            await CommandUtils.GlobalWhisper(m_firehose, msg.UserId, msg.UserName, await FindOnlineFriends(friends));
+            await CommandUtils.SendResponse(m_firehose, msg, await FindOnlineFriends(friends), true);
         }
 
         private async Task HandleList(ChatMessage msg)
@@ -208,7 +208,7 @@ namespace Carl.Dan
                     friends = relation.Friends.ToList<int>();
                 }
                 output += await CommandUtils.FormatUserIds(friends, 250);
-                await CommandUtils.SendResponse(m_firehose, msg, output);
+                await CommandUtils.SendResponse(m_firehose, msg, output, true);
             }
             else
             {
@@ -223,7 +223,7 @@ namespace Carl.Dan
             string friendUserName = CommandUtils.GetSecondSingleWordArgument(msg.Text);
             if (friendUserName == null)
             {
-                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"Who are we {(add ? "adding" : "removing")} as a friend? Specify a user name after the command.", msg.IsWhisper);
+                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"Who are we {(add ? "adding" : "removing")} as a friend? Specify a user name after the command.", true);
                 return;
             }
             int? friendUserId = await MixerUtils.GetUserId(friendUserName);
@@ -236,7 +236,7 @@ namespace Carl.Dan
             // Add the friend to their list
             bool addedToFriends = UpdateList(msg.UserId, friendUserId.Value, add, true);
             bool addedToFollowers = UpdateList(friendUserId.Value, msg.UserId, add, false);
-            await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"You're {(add ? (!addedToFriends && !addedToFollowers ? "still" : "now") : "no longer")} friends with @{friendUserName}{(add ? "! ❤️" : ". 💔")}", msg.IsWhisper);
+            await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"You're {(add ? (!addedToFriends && !addedToFollowers ? "still" : "now") : "no longer")} friends with @{friendUserName}{(add ? "! ❤️" : ". 💔")}", true);
             SaveSettings();
         }
 

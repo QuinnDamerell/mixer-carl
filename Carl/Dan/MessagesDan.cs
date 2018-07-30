@@ -147,7 +147,7 @@ namespace Carl.Dan
         {
             if(command.Equals("msgstats"))
             {
-                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, GetCurrentStatsOutput(10), msg.IsWhisper);
+                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, GetCurrentStatsOutput(10), CommandUtils.ShouldForceIsWhisper(msg));
             }
         }
 
