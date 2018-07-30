@@ -12,6 +12,7 @@ namespace Carl
 {
     public class MixerUtils
     {
+        static string m_userOAuthToken;
         static HttpClient s_client = new HttpClient();
         static ConcurrentDictionary<int, string> s_channelNames = new ConcurrentDictionary<int, string>();
         static ConcurrentDictionary<int, string> s_userIds = new ConcurrentDictionary<int, string>();
@@ -35,7 +36,7 @@ namespace Carl
 
         public static void SetMixerCreds(string oauthToken)
         {
-            s_client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", oauthToken);
+            m_userOAuthToken = oauthToken;
         }
 
         public async static Task<string> GetChannelName(int channelId)
@@ -130,7 +131,7 @@ namespace Carl
             return userName;
         }
 
-        public async static Task<string> MakeMixerHttpRequest(string url)
+        public async static Task<string> MakeMixerHttpRequest(string url, bool useCreds = true)
         {
             int rateLimitBackoff = 0;
             int i = 0;
@@ -138,6 +139,11 @@ namespace Carl
             {
                 HttpRequestMessage request = new HttpRequestMessage();
                 request.RequestUri = new Uri($"https://mixer.com/{url}");
+
+                if(useCreds)
+                {
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", m_userOAuthToken);
+                }
 
                 HttpResponseMessage response = await s_client.SendAsync(request);
                 if (response.StatusCode == (HttpStatusCode)429)

@@ -15,6 +15,8 @@ namespace Carl
         None,
         Connecting,
         Connected,
+        ConnectingWithAuth,
+        ConnectedWithAuth,
         Disconnected
     }
 
@@ -76,8 +78,20 @@ namespace Carl
             }
             UpdateStatus(ChatState.Connecting);
 
+            // Connect without auth
+            if(await ConnectInternal(false))
+            {
+                UpdateStatus(ChatState.Connected);
+                return true;
+            }
+
+            return false;
+        }
+
+        private async Task<bool> ConnectInternal(bool withCreds)
+        {
             // Get the details.
-            ChatServerDetails details = await GetChatServerDetails();
+            ChatServerDetails details = await GetChatServerDetails(withCreds);
             if (details == null)
             {
                 return false;
@@ -100,21 +114,25 @@ namespace Carl
                 Logger.Error($"Failed to connect to chat server for channel: {m_channelId}");
                 return false;
             }
-
+            
             // Authorize!
             WebSocketMessage msg = new WebSocketMessage()
             {
                 type = "method",
                 method = "auth",
                 arguments = new List<string>()
-                {
-                    $"{m_channelId}",
-                    $"{m_userId}",
-                    details.authkey
-                }
+            {
+                $"{m_channelId}"
+            }
             };
 
-            if(!await SendMessage(msg, true))
+            if (withCreds)
+            {
+                msg.arguments.Add(m_userId + String.Empty);
+                msg.arguments.Add(details.authkey);
+            }
+
+            if (!await SendMessage(msg, true))
             {
                 Logger.Error($"Failed to send auth message to channel: {m_channelId}");
                 return false;
@@ -122,16 +140,73 @@ namespace Carl
 
             // Note the message id
             m_authCallMessageId = msg.id;
-
-            UpdateStatus(ChatState.Connected);
+            
             return true;
+        }
+
+        private async Task<bool> ReconnectWithAuth()
+        {
+            if(m_state == ChatState.Disconnected)
+            {
+                return false;
+            }
+            UpdateStatus(ChatState.ConnectingWithAuth);
+
+            // Disconnect the current socket.
+            await m_ws.Disconnect();
+            m_ws = null;
+
+            // Connect with auth
+            if(await ConnectInternal(true))
+            {
+                UpdateStatus(ChatState.ConnectedWithAuth);
+                return true;
+            }
+
+            // If we fail, fire disconnected.
+            await Disconnect();
+            return false;
         }
 
         private async Task<bool> SendMessage(WebSocketMessage msg, bool overrideState = false)
         {
-            if (!overrideState && m_state != ChatState.Connected)
+            if(!overrideState)
             {
-                return false;
+                // If we aren't connected with auth, do so now.
+                if(m_state == ChatState.Connected)
+                {
+                    bool updated = false;
+                    lock(this)
+                    {
+                        if (m_state == ChatState.Disconnected)
+                        {
+                            return false;
+                        }
+                        if(m_state == ChatState.Connected)
+                        {
+                            updated = true;
+                        }
+                        UpdateStatus(ChatState.ConnectingWithAuth);
+                    }
+
+                    // If we updated the value, connect now.
+                    if (updated)
+                    {
+                        await ReconnectWithAuth();
+                    }
+                }
+
+                // Wait for the socket to connect.
+                while(m_state == ChatState.ConnectingWithAuth)
+                {
+                    await Task.Delay(100);
+                }
+
+                // Make sure we connected.
+                if(m_state == ChatState.Disconnected)
+                {
+                    return false;
+                }
             }
 
             SimpleWebySocket ws = m_ws;
@@ -175,6 +250,12 @@ namespace Carl
 
         public void OnStateChanged(SimpleWebySocketState newState, bool wasUserInvoked)
         {
+            if(m_state == ChatState.ConnectingWithAuth && newState == SimpleWebySocketState.Disconnected)
+            {
+                // This means we are reconnecting with auth.
+                return;
+            }
+
             switch (newState)
             {
                 case SimpleWebySocketState.Connected:
@@ -207,8 +288,20 @@ namespace Carl
                         return;
                     }
                     break;
-                case ChatState.Disconnected:
+                case ChatState.ConnectingWithAuth:
                     if(m_state != ChatState.Connected && m_state != ChatState.Connecting)
+                    {
+                        return;
+                    }
+                    break;
+                case ChatState.ConnectedWithAuth:
+                    if (m_state != ChatState.ConnectingWithAuth)
+                    {
+                        return;
+                    }
+                    break;
+                case ChatState.Disconnected:
+                    if(m_state != ChatState.Disconnected)
                     {
                         return;
                     }
@@ -415,11 +508,11 @@ namespace Carl
             }
         }
 
-        async Task<ChatServerDetails> GetChatServerDetails()
+        async Task<ChatServerDetails> GetChatServerDetails(bool useCreds)
         {
             try
             {               
-                string res = await MixerUtils.MakeMixerHttpRequest($"api/v1/chats/{m_channelId}");
+                string res = await MixerUtils.MakeMixerHttpRequest($"api/v1/chats/{m_channelId}", useCreds);
                 return JsonConvert.DeserializeObject<ChatServerDetails>(res);
             }
             catch (Exception e)
