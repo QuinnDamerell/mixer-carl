@@ -175,7 +175,7 @@ namespace Carl.Dan
 
         private async Task HandleWhisperCommand(ChatMessage msg)
         {
-            await CommandUtils.SendResponse(m_firehose, msg, "Some of you have been abusing whisper... so this feature is under redevelopment to fix that. https://youtu.be/2oBPK_iqBZc");
+            await CommandUtils.SendResponse(m_firehose, msg, "Some of you have been abusing whisper... so this feature is under redevelopment to fix that. https://youtu.be/2oBPK_iqBZc?t=39s");
             return;
 
             //string userName = CommandUtils.GetSingleWordArgument(msg.Text);
@@ -301,7 +301,7 @@ namespace Carl.Dan
 
         private async Task HandleSummon(ChatMessage msg)
         {
-            await CommandUtils.SendResponse(m_firehose, msg, "Some of you have been abusing summon... so this feature is under redevelopment to fix that. https://youtu.be/2oBPK_iqBZc");
+            await CommandUtils.SendResponse(m_firehose, msg, "Some of you have been abusing summon... so this feature is under redevelopment to fix that. https://youtu.be/2oBPK_iqBZc?t=39s");
             return;
             //https://www.youtube.com/watch?v=2oBPK_iqBZc&feature=youtu.be&t=39s
 
