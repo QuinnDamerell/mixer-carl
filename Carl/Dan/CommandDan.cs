@@ -141,6 +141,12 @@ namespace Carl.Dan
 
         private async Task HandleFindCommand(ChatMessage msg)
         {
+            if (!CommandUtils.HasAdvancePermissions(msg.UserId))
+            {
+                await CommandUtils.SendResponse(m_firehose, msg, "Some of you have been abusing find... so this feature is under redevelopment to fix that. https://youtu.be/2oBPK_iqBZc?t=39s");
+                return;
+            }
+
             string userName = CommandUtils.GetSingleWordArgument(msg.Text);
             if(userName == null)
             {
