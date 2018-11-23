@@ -1,0 +1,21 @@
+[Unit]
+Description=carl-bot daemon
+After=network.target
+# The setting below will tell systemd to restart the service forever until it starts successfully
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+LimitNOFILE=65535
+User=carl
+Group=carl
+WorkingDirectory=/opt/carl
+ExecStart=/opt/carl/Carl
+#The service will restart every second when it crashes until it starts successfully
+Restart=always
+RestartSec=1s
+StartLimitBurst=0
+
+[Install]
+WantedBy=multi-user.target
+
