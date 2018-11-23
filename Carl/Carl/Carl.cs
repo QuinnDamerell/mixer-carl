@@ -49,26 +49,36 @@ namespace Carl
 
         public bool Run(string[] args)
         {
-            Logger.Info("Checking Args...");
-            if(args.Length < 2)
+            CarlConfig config = CarlConfig.Get();
+            if(config != null)
             {
-                Logger.Info("Usage: carl <chat bot user Id> <chat bot oauth> (channel viewer count limit - default is 5)");
-                Logger.Info("User info can be found here: https://dev.mixer.com/tutorials/chatbot.html");
-                return false;
+                m_chatBotUserId = config.ChatBotUserId;
+                m_chatBotoAuthToken = config.ChatBotOAuthToken;
+                m_viewerCountLimit = config.ViewerCountLimit;
             }
-
-            if(!int.TryParse(args[0], out m_chatBotUserId))
+            else
             {
-                Logger.Error("Failed to parse chat bot user id.");
-                return false;
-            }
-            m_chatBotoAuthToken = args[1];
-            if(args.Length > 2)
-            {
-                if (!int.TryParse(args[2], out m_viewerCountLimit))
+                Logger.Info("Checking Args...");
+                if(args.Length < 2)
                 {
-                    Logger.Error("Failed to parse viewer count limit.");
+                    Logger.Info("Usage: carl <chat bot user Id> <chat bot oauth> (channel viewer count limit - default is 5)");
+                    Logger.Info("User info can be found here: https://dev.mixer.com/tutorials/chatbot.html");
                     return false;
+                }
+
+                if(!int.TryParse(args[0], out m_chatBotUserId))
+                {
+                    Logger.Error("Failed to parse chat bot user id.");
+                    return false;
+                }
+                m_chatBotoAuthToken = args[1];
+                if(args.Length > 2)
+                {
+                    if (!int.TryParse(args[2], out m_viewerCountLimit))
+                    {
+                        Logger.Error("Failed to parse viewer count limit.");
+                        return false;
+                    }
                 }
             }
 
