@@ -26,7 +26,9 @@ namespace Carl
         public event ChatWsStateChanged OnChatWsStateChanged;
 
         // Keep 500 ms between sends to avoid rate limiting.
-        TimeSpan c_minTimeBetweenSends = new TimeSpan(0, 0, 0, 0, 600); 
+        TimeSpan c_minTimeBetweenSends = new TimeSpan(0, 0, 0, 0, 600);
+        // The amount of time we will keep an authed connection alive before going back to unauthed.
+        TimeSpan c_maxTimeBetweenSendsKeepAuthed = new TimeSpan(0, 1, 0);
 
         const int c_mixerMaxMessageLength = 360;
 
@@ -37,6 +39,7 @@ namespace Carl
         ICarl m_callback;
         Random m_rand;
         int? m_authCallMessageId = null;
+        DateTime? m_lastSendTime = null;
 
         class ChatServerDetails
         {
@@ -157,19 +160,47 @@ namespace Carl
             m_ws = null;
 
             // Connect with auth
-            if(await ConnectInternal(true))
+            if(!(await ConnectInternal(true)))
             {
-                UpdateStatus(ChatState.ConnectedWithAuth);
-                return true;
+                // If we fail, fire disconnected.
+                await Disconnect();
+                return false;
             }
 
-            // If we fail, fire disconnected.
-            await Disconnect();
-            return false;
+            UpdateStatus(ChatState.ConnectedWithAuth);
+            return true;
+        }
+
+        private async Task<bool> ReconnectWithoutAuth()
+        {
+            if (m_state == ChatState.Disconnected)
+            {
+                return false;
+            }
+            UpdateStatus(ChatState.Connecting);
+
+            Logger.Info("Disconnecting from auth!");
+
+            // Disconnect the current socket.
+            await m_ws.Disconnect();
+            m_ws = null;
+
+            // Connect with auth
+            if (!(await ConnectInternal(false)))
+            {
+                // If we fail, fire disconnected.
+                await Disconnect();
+                return false;
+            }
+
+            UpdateStatus(ChatState.Connected);
+            return true;
         }
 
         private async Task<bool> SendMessage(WebSocketMessage msg, bool overrideState = false)
         {
+            m_lastSendTime = DateTime.Now;
+
             if(!overrideState)
             {
                 // If we aren't connected with auth, do so now.
@@ -277,7 +308,7 @@ namespace Carl
                 case ChatState.None:
                     return;
                 case ChatState.Connecting:
-                    if(m_state != ChatState.None)
+                    if(m_state != ChatState.None && m_state != ChatState.ConnectedWithAuth)
                     {
                         return;
                     }
@@ -368,6 +399,17 @@ namespace Carl
                         Logger.Error("Error received from chat server. " + message);
                     }
                 }
+            }
+
+            // Check to see if we should unauth
+            if(DateTime.Now - m_lastSendTime > c_maxTimeBetweenSendsKeepAuthed)
+            {
+                Task.Run(() =>
+                {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                    ReconnectWithoutAuth();
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                });
             }
         }
 
