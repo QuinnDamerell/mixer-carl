@@ -475,7 +475,11 @@ namespace Carl
                 }
 
                 // Fire off the message
-                m_callback.OnChatMessage(msg);                
+                ICarl callback = m_callback;
+                if (callback != null)
+                {
+                    callback.OnChatMessage(msg);
+                }
             }         
         }
 
@@ -539,12 +543,16 @@ namespace Carl
                     return;
                 }
 
-                m_callback.OnUserActivity(new UserActivity()
+                ICarl callback = m_callback;
+                if (callback != null)
                 {
-                    ChannelId = channelValue.Value<int>(),
-                    IsJoin = isJoin,
-                    UserId = userIdValue.Value<int>(),
-                });
+                    callback.OnUserActivity(new UserActivity()
+                    {
+                        ChannelId = channelValue.Value<int>(),
+                        IsJoin = isJoin,
+                        UserId = userIdValue.Value<int>(),
+                    });
+                }
             }
         }
 
