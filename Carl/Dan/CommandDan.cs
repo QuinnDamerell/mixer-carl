@@ -336,20 +336,20 @@ namespace Carl.Dan
             }
 
             // Check to see if the user is running the extension.
-            if (await CheckIfUserHasAnActiveExtension(summonUserName))
-            {
-                // The user has an active extension
-                if (await PostSummonToExtension(summonUserName, msg.UserName, channelName))
-                {
-                    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I send an extension summon to {summonUserName}", msg.IsWhisper);
-                }
-                else
-                {
-                    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"That's not right... I failed to send extension summon to {summonUserName}.", msg.IsWhisper);
-                }
-            }
-            else
-            {
+            //if (await CheckIfUserHasAnActiveExtension(summonUserName))
+            //{
+            //    // The user has an active extension
+            //    if (await PostSummonToExtension(summonUserName, msg.UserName, channelName))
+            //    {
+            //        await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I send an extension summon to {summonUserName}", msg.IsWhisper);
+            //    }
+            //    else
+            //    {
+            //        await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"That's not right... I failed to send extension summon to {summonUserName}.", msg.IsWhisper);
+            //    }
+            //}
+            //else
+            //{
                 // The user doesn't have the extension! Whisper them.
                 int whispers = await CommandUtils.GlobalWhisper(m_firehose, summonUserName, $"{msg.UserName} summons you to @{channelName}'s channel! https://mixer.com/{channelName}");
                 if (whispers == 0)
@@ -358,9 +358,9 @@ namespace Carl.Dan
                 }
                 else
                 {
-                    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I whisper summoned {summonUserName} in {whispers} channels", msg.IsWhisper);
+                    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I summoned {summonUserName} in {whispers} channel{(whispers > 1 ? "s" : "")}", msg.IsWhisper);
                 }
-            }
+            //}
         }
 
         private async Task<bool> CheckIfUserHasAnActiveExtension(string userName)
