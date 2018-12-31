@@ -161,7 +161,7 @@ namespace Carl.Dan
             int? userId = await MixerUtils.GetUserId(userName);
             if(!userId.HasValue)
             {
-                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"That's not right, I had trouble getting the user id. Try again later.", CommandUtils.ShouldForceIsWhisper(msg));
+                await CommandUtils.SendMixerUserNotFound(m_firehose, msg, userName);
                 return;
             }
 
@@ -188,7 +188,7 @@ namespace Carl.Dan
             string userName = CommandUtils.GetSingleWordArgument(msg.Text);
             if (userName == null)
             {
-                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, "Who do you want to whisper? Give me a user name and the message you want to send.", true);
+                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, "I can globally whisper anyone on Mixer for you, they will get it no matter what channel they are watching. Give me a user name and the message you want to send.", true);
                 return;
             }
             string message = CommandUtils.GetStringAfterFirstTwoWords(msg.Text);

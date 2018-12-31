@@ -160,7 +160,7 @@ namespace Carl.Dan
 
         public static async Task<bool> SendCantFindUser(IFirehose m_firehose, ChatMessage msg, string failedToFindUserName)
         {
-            return await SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"It doesn't look like {failedToFindUserName} is on Mixer right now. (Maybe they're lurking?)", msg.IsWhisper);
+            return await SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"It doesn't look like {failedToFindUserName} is active on Mixer right now. (Maybe they're lurking?)", msg.IsWhisper);
         }
 
         public static async Task<bool> SendMixerUserNotFound(IFirehose m_firehose, ChatMessage msg, string failedToFindUserName)
