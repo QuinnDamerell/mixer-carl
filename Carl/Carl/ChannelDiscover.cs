@@ -83,7 +83,6 @@ namespace Carl
                 Token = await MixerUtils.GetChannelName(153416),
                 ViewersCurrent = 300
             });
-            return channels;
 
             int i = 0;
             while (i < 1000)
