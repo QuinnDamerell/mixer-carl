@@ -25,6 +25,8 @@ namespace Carl.Dan
 
     public class FriendlyDan : Dan, IFirehoseUserActivityListener, IFirehoseCommandListener
     {
+        private static FriendlyDan s_instance;
+
         TimeSpan c_minTimeBetweenFriendsCheck = new TimeSpan(0, 10, 0);
         TimeSpan c_minTimeBetweenOnlineAnnounce = new TimeSpan(0, 5, 0);
 
@@ -37,6 +39,7 @@ namespace Carl.Dan
             Setup();
             m_firehose.SubUserActivity(this);
             m_firehose.SubCommandListener(this);
+            s_instance = this;
         }
 
         public async void OnUserActivity(UserActivity activity)
@@ -134,6 +137,35 @@ namespace Carl.Dan
             return output;
         }
 
+        public static bool AreMutualFriends(int requesterId, int actionReceiverId)
+        {
+            return s_instance.AreMutualFriendsInternal(requesterId, actionReceiverId);
+        }
+
+        public bool AreMutualFriendsInternal(int requesterId, int actionReceiverId)
+        {
+            // Wa are acutally just going to check that this user is friends with us. 
+            // It doesn't matter if we friended them.
+
+            // Try to get the record for the action receiver.
+            Relationships relation;
+            if (m_currentSettings.Users.TryGetValue(actionReceiverId, out relation))
+            {
+                // Lock their following list and make sure the main user is in it.
+                lock(relation.Friends)
+                {
+                    foreach(int friendUserId in relation.Friends)
+                    {
+                        if(friendUserId == requesterId)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
         #region Commands
 
         public async void OnCommand(string command, ChatMessage msg)
@@ -143,7 +175,7 @@ namespace Carl.Dan
                 string secondaryCommand = CommandUtils.GetSingleWordArgument(msg.Text);
                 if(secondaryCommand == null || secondaryCommand.Equals("help"))
                 {
-                    await CommandUtils.SendResponse(m_firehose, msg, $"Friends allows me to notify you when people you know join Mixer channels. Friend sub commands: add, remove, find, list, lurk, clear, help.", true);
+                    await CommandUtils.SendResponse(m_firehose, msg, $"Friends allows you interact with others through me and get notifications when they enter channels on Mixer. The friends subcommands are: find, list, add, remove, lurk, clear, help. Example: ^friends add Quinninator", true);
                     return;
                 }
                 if (secondaryCommand.Equals("add"))

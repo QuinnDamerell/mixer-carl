@@ -165,7 +165,20 @@ namespace Carl.Dan
 
         public static async Task<bool> SendMixerUserNotFound(IFirehose m_firehose, ChatMessage msg, string failedToFindUserName)
         {
-            return await SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I can't find {failedToFindUserName} on Mixer. Did you spell their name correctly? 😕", msg.IsWhisper);
+            return await SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I can't find a user named {failedToFindUserName} on Mixer. Is that spelled correctly? 😕", msg.IsWhisper);
+        }
+
+        public static async Task<bool> CheckForMutualFriendsAndMessageIfNot(IFirehose m_firehose, ChatMessage msg, int actionReceiverId, string action)
+        {
+            if (HasAdvancePermissions(msg.UserId) || FriendlyDan.AreMutualFriends(msg.UserId, actionReceiverId))
+            {
+                return true;
+            }
+            else
+            {
+                await SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"You need to be mutual friends with {MixerUtils.GetUserName(actionReceiverId)} before you can {action} them. You both need to friend each other with the \"^friends add\" command.", msg.IsWhisper);
+                return false;
+            }
         }
 
         static public async Task<bool> SendResponse(IFirehose firehose, ChatMessage msg, string message, bool forceWhisper = true)
