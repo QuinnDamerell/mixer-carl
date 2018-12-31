@@ -176,7 +176,7 @@ namespace Carl.Dan
             }
             else
             {
-                await SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"You need to be mutual friends with {MixerUtils.GetUserName(actionReceiverId)} before you can {action} them. You both need to friend each other with the \"^friends add\" command.", msg.IsWhisper);
+                await SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"You need to be mutual friends with {await MixerUtils.GetUserName(actionReceiverId)} before you can {action} them. You both need to friend each other with the \"^friends add\" command.", msg.IsWhisper);
                 return false;
             }
         }
