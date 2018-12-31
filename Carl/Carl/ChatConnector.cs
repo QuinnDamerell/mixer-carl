@@ -179,8 +179,6 @@ namespace Carl
             }
             UpdateStatus(ChatState.Connecting);
 
-            Logger.Info("Disconnecting from auth!");
-
             // Disconnect the current socket.
             await m_ws.Disconnect();
             m_ws = null;

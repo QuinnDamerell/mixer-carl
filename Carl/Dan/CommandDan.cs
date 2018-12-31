@@ -53,11 +53,21 @@ namespace Carl.Dan
                 // See if we can handle it internally.
                 if (command.Equals("help") || command.Equals("command") || command.Equals("commands"))
                 {
-                    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"Hello @{msg.UserName}! You can access my commands in any channel by typing '^<command>' or by whispering me a command. Commands: hello, whisper, summon, find, echo, friend, lurk, mock, pmock, cmock, userstats, msgstats, exit, about", CommandUtils.ShouldForceIsWhisper(msg));
+                    string response;
+                    if(CommandUtils.HasAdvancePermissions(msg.UserId))
+                    {
+                        response = $"Hello @{msg.UserName}! You can talk to me in any Mixer channel by typing '^<command>' or by whispering me a command. Commands: hello, whisper, summon, find, echo, friend, lurk, mock, pmock, cmock, userstats, msgstats, exit, about";
+                    }
+                    else
+                    {
+                        response = $"Hello @{msg.UserName}! You can talk to me in any Mixer channel by typing '^<command>' or by whispering me a command. Commands: hello, whisper, summon, find, echo, friend, lurk, userstats, msgstats, about";
+
+                    }
+                    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, response, CommandUtils.ShouldForceIsWhisper(msg));
                 }
                 if (command.Equals("about"))
                 {
-                    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, "Hey there! I'm Karl! 🤗 I'm an experimental global chat observer created by @Quinninator and @BoringNameHere. To see what I can do for you, try ^commands.", CommandUtils.ShouldForceIsWhisper(msg));
+                    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, "Hey there! I'm Karl! 🤗 I'm an experimental global chat observer created by @Quinninator and @BoringNameHere. To see what I can do, try whispering me ^commands.", CommandUtils.ShouldForceIsWhisper(msg));
                 }
                 else if (command.Equals("hello") | command.Equals("hi"))
                 {
@@ -141,12 +151,6 @@ namespace Carl.Dan
 
         private async Task HandleFindCommand(ChatMessage msg)
         {
-            if (!CommandUtils.HasAdvancePermissions(msg.UserId))
-            {
-                await CommandUtils.SendResponse(m_firehose, msg, "Some of you have been abusing find... so this feature is under redevelopment to fix that. https://youtu.be/2oBPK_iqBZc?t=39s");
-                return;
-            }
-
             string userName = CommandUtils.GetSingleWordArgument(msg.Text);
             if(userName == null)
             {
@@ -181,31 +185,28 @@ namespace Carl.Dan
 
         private async Task HandleWhisperCommand(ChatMessage msg)
         {
-            await CommandUtils.SendResponse(m_firehose, msg, "Some of you have been abusing whisper... so this feature is under redevelopment to fix that. https://youtu.be/2oBPK_iqBZc?t=39s");
-            return;
+            string userName = CommandUtils.GetSingleWordArgument(msg.Text);
+            if (userName == null)
+            {
+                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, "Who do you want to whisper? Give me a user name and the message you want to send.", true);
+                return;
+            }
+            string message = CommandUtils.GetStringAfterFirstTwoWords(msg.Text);
+            if (message == null)
+            {
+                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, "What do you want to say? Give me a user name and the message you want to send.", true);
+                return;
+            }
 
-            //string userName = CommandUtils.GetSingleWordArgument(msg.Text);
-            //if(userName == null)
-            //{
-            //    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, "Who do you want to whisper? Give me a user name and the message you want to send.", true);
-            //    return;
-            //}
-            //string message = CommandUtils.GetStringAfterFirstTwoWords(msg.Text);
-            //if(message == null)
-            //{
-            //    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, "What do you want to say? Give me a user name and the message you want to send.", true);
-            //    return;
-            //}
-
-            //int whispers = await CommandUtils.GlobalWhisper(m_firehose, userName, $"{msg.UserName} says: {message}");
-            //if (whispers == 0)
-            //{
-            //    await CommandUtils.SendCantFindUser(m_firehose, msg, userName);
-            //}
-            //else
-            //{
-            //    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I sent your message to {userName} in {whispers} channels", true);
-            //}
+            int whispers = await CommandUtils.GlobalWhisper(m_firehose, userName, $"{msg.UserName} says: {message}");
+            if (whispers == 0)
+            {
+                await CommandUtils.SendCantFindUser(m_firehose, msg, userName);
+            }
+            else
+            {
+                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I sent your message to {userName} in {whispers} channels", true);
+            }
         }
 
         private async Task HandleClearMock(ChatMessage msg)
