@@ -18,7 +18,7 @@ namespace Carl
 
         public static void Error(string message, Exception e)
         {
-            Log($"Error!: {message}, exception:{(e == null ? "no message" : e.Message)}");
+            Log($"Error!: {message}, exception:{(e == null ? "no message" : e.Message)} \n\rStack:{(e == null ? "no stack" : e.StackTrace)}");
         }
 
         private static void Log(string message)
