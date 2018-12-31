@@ -358,7 +358,7 @@ namespace Carl.Dan
                 }
                 else
                 {
-                    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I summoned {summonUserName} in {whispers} channel{(whispers > 1 ? "s" : "")}", msg.IsWhisper);
+                    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I summoned {await MixerUtils.GetUserName(actionReceiverId.Value)} in {whispers} channel{(whispers > 1 ? "s" : "")}.", msg.IsWhisper);
                 }
             //}
         }

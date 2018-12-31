@@ -41,7 +41,7 @@ namespace Carl
         int m_workerLimit = 10;
         int m_workMasterTimeMs = 2000;
 
-        List<int> m_channelOverrides = new List<int>(){ 153416 };
+        List<int> m_channelOverrides = null;//= new List<int>(){ 153416 };
         DateTime? m_lastChannelUpdateTime;
 
         int m_chatBotUserId;
