@@ -94,12 +94,11 @@ namespace Carl
 
                 // Start the worker threads
                 m_sendThread = new Thread(SendThread);
+                m_sendThread.IsBackground = true;
                 m_sendThread.Start();
                 m_recvThread = new Thread(ReceiveThread);
-                m_recvThread.Start();
-                //var _ignored = Task.Run(() => ReceiveThread()).ConfigureAwait(false);
-                //var __ignored = Task.Run(() => SendThread()).ConfigureAwait(false);
-                
+                m_recvThread.IsBackground = true;
+                m_recvThread.Start();                
                 return true;
             }
             catch (Exception e)
@@ -192,7 +191,7 @@ namespace Carl
                 double sleepyTimeMs = MinTimeBetweenSends.TotalMilliseconds - (DateTime.Now - sendStart).TotalMilliseconds;
                 if (sleepyTimeMs > 0)
                 {
-                    await Task.Delay((int)sleepyTimeMs);
+                    Thread.Sleep((int)sleepyTimeMs);
                 }
             }
         }
@@ -308,6 +307,10 @@ namespace Carl
 
             // Cancel anything that's not dead.
             m_cancelToken.Cancel();
+
+            // Make sure the threds stop.
+            m_sendThread.Abort();
+            m_recvThread.Abort();
         }
     }
 }

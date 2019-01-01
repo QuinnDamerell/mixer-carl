@@ -19,6 +19,7 @@ namespace Carl.Dan
         DateTime m_lastMinUpdate;
 
         HistoricAccumulator<string> m_wordHistory = new HistoricAccumulator<string>();
+        Thread m_statsThread;
 
         public MessagesDan(IFirehose firehose)
             : base(firehose)
@@ -28,7 +29,9 @@ namespace Carl.Dan
 
             m_wordHistory.SetPreparer(this);
 
-            var _ignored = Task.Run(() => StatsThread());
+            m_statsThread = new Thread(StatsThread);
+            m_statsThread.IsBackground = true;
+            m_statsThread.Start();
         }
 
         public bool PrepareForInsert(ref string value)
@@ -58,7 +61,7 @@ namespace Carl.Dan
             m_wordHistory.AddValue(msg.Text.Split(' '));
         }
 
-        private async void StatsThread()
+        private void StatsThread()
         {
             while(true)
             {
@@ -91,7 +94,7 @@ namespace Carl.Dan
                 double sleepTime = 1000 - (DateTime.Now - start).TotalMilliseconds;
                 if(sleepTime > 0)
                 {
-                    await Task.Delay((int)sleepTime);
+                    Thread.Sleep((int)sleepTime);
                 }
             }
         }

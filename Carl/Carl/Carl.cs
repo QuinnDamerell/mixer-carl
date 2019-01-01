@@ -96,6 +96,7 @@ namespace Carl
             Logger.Info("Setting up work master");
             // Setup the work master
             m_masterWorker = new Thread(WorkMasterThread);
+            m_masterWorker.IsBackground = true;
             m_masterWorker.Start();
 
             Logger.Info("Setting up worker threads");
@@ -105,6 +106,7 @@ namespace Carl
             {
                 i++;
                 Thread t = new Thread(WorkerThread);
+                t.IsBackground = true;
                 t.Start();
                 m_workers.Add(t);
             }
@@ -198,7 +200,7 @@ namespace Carl
             }
         }
 
-        private async void WorkMasterThread()
+        private void WorkMasterThread()
         {
             while (true)
             {
@@ -246,20 +248,14 @@ namespace Carl
 
                 Logger.Info($"{connectedChannels}/{eligibleChannels} ({(eligibleChannels == 0 ? 0 : Math.Round(((double)connectedChannels / (double)eligibleChannels)*100, 2))}%) connected channels; tracking {CreeperDan.GetViewerCount().ToString("n0", Culture)} viewers. Work time was: {(DateTime.Now - workStart).TotalMilliseconds}ms");
 
-                DateTime removeTime = DateTime.Now;
                 foreach (int id in toRemove)
                 {
-                    await RemoveChannel(id, "the channel is offline or under the viewer limit.");
-                }
-                double time = (DateTime.Now - removeTime).TotalMilliseconds;
-                if(time > 100)
-                {
-                    Logger.Info($"Removing old channels took {time}ms");
+                    RemoveChannel(id, "the channel is offline or under the viewer limit.").ConfigureAwait(false);
                 }
 
                 DateTime sleepStart = DateTime.Now;
-                await Task.Delay(m_workMasterTimeMs);
-                time = (DateTime.Now - sleepStart).TotalMilliseconds;
+                Thread.Sleep(m_workMasterTimeMs);
+                double time = (DateTime.Now - sleepStart).TotalMilliseconds;
                 if (time > 2100)
                 {
                     Logger.Info($"Master work thread slept for {time}ms");

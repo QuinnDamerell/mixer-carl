@@ -34,8 +34,8 @@ namespace Carl
         public void Run()
         {
             m_updater = new Thread(UpdateThread);
+            m_updater.IsBackground = true;
             m_updater.Start();
-            UpdateThread();
         }
 
         private async void UpdateThread()
@@ -57,7 +57,7 @@ namespace Carl
                     Logger.Error("Error during channel discovery update.", e);
                 }
 
-                await Task.Delay(m_threadSleepTimeMs);
+                Thread.Sleep(m_threadSleepTimeMs);
             }
         }
 

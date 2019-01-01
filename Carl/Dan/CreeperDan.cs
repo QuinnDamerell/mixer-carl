@@ -25,6 +25,8 @@ namespace Carl.Dan
         int m_viewCountAccumlator = 0;
         ICarl m_userActivityCallback;
 
+        Thread m_userChecker;
+
         public CreeperDan(IFirehose firehose, ICarl userActivityCallback)
             : base(firehose)
         {
@@ -34,7 +36,9 @@ namespace Carl.Dan
             m_firehose.SubCommandListener(this);
             s_instance = this;
 
-            var _ignored = Task.Run(() => ChannelUserCheckerThread());
+            m_userChecker = new Thread(ChannelUserCheckerThread);
+            m_userChecker.IsBackground = false;
+            m_userChecker.Start();
         }
 
         public static List<int> GetActiveChannelIds(int userId)
@@ -257,7 +261,7 @@ namespace Carl.Dan
                         if (sleepTime > 0)
                         {
                             Logger.Info($"Viewer tracker round update {updateRound} done in {elaspedSeconds} seconds.");
-                            await Task.Delay((int)(sleepTime * 1000));
+                            Thread.Sleep((int)(sleepTime * 1000));
                         }
                         else
                         {
@@ -274,7 +278,7 @@ namespace Carl.Dan
                     Logger.Error("Channel checker hit an exception while running.", e);
                 }
 
-                await Task.Delay(c_sleepyTimeBetweenChannelChecksMs);
+                Thread.Sleep(c_sleepyTimeBetweenChannelChecksMs);
             }
         }
 
