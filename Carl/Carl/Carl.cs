@@ -299,7 +299,7 @@ namespace Carl
                 foreach (MixerChannel chan in e)
                 {
                     // Filter by the viewer count limit.
-                    if (chan.ViewersCurrent < m_viewerCountLimit)
+                    if (chan.ViewersCurrent < m_viewerCountLimit || !chan.Online)
                     {
                         continue;
                     }
