@@ -202,6 +202,7 @@ namespace Carl
         {
             while (true)
             {
+                DateTime workStart = DateTime.Now;
                 int connectedChannels = 0;
                 int eligibleChannels = 0;
                 List<int> toRemove = new List<int>();
@@ -243,14 +244,26 @@ namespace Carl
                     }
                 }
 
-                Logger.Info($"{connectedChannels}/{eligibleChannels} ({(eligibleChannels == 0 ? 0 : Math.Round(((double)connectedChannels / (double)eligibleChannels)*100, 2))}%) connected channels; tracking {CreeperDan.GetViewerCount().ToString("n0", Culture)} viewers.");
+                Logger.Info($"{connectedChannels}/{eligibleChannels} ({(eligibleChannels == 0 ? 0 : Math.Round(((double)connectedChannels / (double)eligibleChannels)*100, 2))}%) connected channels; tracking {CreeperDan.GetViewerCount().ToString("n0", Culture)} viewers. Work time was: {(DateTime.Now - workStart).TotalMilliseconds}ms");
 
+                DateTime removeTime = DateTime.Now;
                 foreach (int id in toRemove)
                 {
                     await RemoveChannel(id, "the channel is offline or under the viewer limit.");
                 }
+                double time = (DateTime.Now - removeTime).TotalMilliseconds;
+                if(time > 100)
+                {
+                    Logger.Info($"Removing old channels took {time}ms");
+                }
 
+                DateTime sleepStart = DateTime.Now;
                 await Task.Delay(m_workMasterTimeMs);
+                time = (DateTime.Now - sleepStart).TotalMilliseconds;
+                if (time > 2100)
+                {
+                    Logger.Info($"Master work thread slept for {time}ms");
+                }
             }
         }
 
