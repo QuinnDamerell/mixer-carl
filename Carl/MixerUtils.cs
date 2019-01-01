@@ -14,19 +14,27 @@ namespace Carl
     {
         static string m_userOAuthToken;
         static HttpClient s_client = new HttpClient();
-        static ConcurrentDictionary<int, string> s_channelNames = new ConcurrentDictionary<int, string>();
-        static ConcurrentDictionary<int, string> s_userIds = new ConcurrentDictionary<int, string>();
-        static ConcurrentDictionary<string, int> s_userNames = new ConcurrentDictionary<string, int>();
+        static ConcurrentDictionary<int, UserInfo> s_channelIds = new ConcurrentDictionary<int, UserInfo>();
+        static ConcurrentDictionary<int, UserInfo> s_userIds = new ConcurrentDictionary<int, UserInfo>();
+        static ConcurrentDictionary<string, UserInfo> s_userNames = new ConcurrentDictionary<string, UserInfo>();
+
+        class UserInfo
+        {
+            public string Name;
+            public int UserId = 0;
+            public int ChannelId = 0;
+        }
 
         class MixerChannelApi
         {
             public string token;
             public int userId;
+            public int id;
         }
 
         class MixerUserApi
         {
-            public string username;
+            public MixerChannelApi channel;
         }
 
         public static void Init()
@@ -42,17 +50,21 @@ namespace Carl
         public async static Task<string> GetChannelName(int channelId)
         {
             // Look for it in the cache
-            string channelName = null;
-            if(s_channelNames.TryGetValue(channelId, out channelName))
-            {
-                return channelName;
+            UserInfo userObj = null;
+            if(s_channelIds.TryGetValue(channelId, out userObj))
+            { 
+                return userObj.Name;                
             }
 
             // Try to get it
+            userObj = new UserInfo();
             try
             {
                 string res = await MakeMixerHttpRequest($"api/v1/channels/{channelId}");
-                channelName = JsonConvert.DeserializeObject<MixerChannelApi>(res).token;
+                var api = JsonConvert.DeserializeObject<MixerChannelApi>(res);
+                userObj.ChannelId = api.id;
+                userObj.Name = api.token;
+                userObj.UserId = api.userId;
             }
             catch (Exception e)
             {
@@ -60,61 +72,104 @@ namespace Carl
                 return null;
             }
 
-            if(String.IsNullOrWhiteSpace(channelName))
+            if(userObj.ChannelId == 0 || userObj.UserId == 0 || String.IsNullOrWhiteSpace(userObj.Name))
             {
                 return null;
             }
 
-            // Try to set it in the cache
-            s_channelNames.TryAdd(channelId, channelName);
-            return channelName;
+            AddToMaps(userObj);
+
+            return userObj.Name;
         }
 
-        public static void AddChannelMap(int channelId, string channelName)
+        public async static Task<string> GetProperUserName(string userName)
         {
-            s_channelNames.TryAdd(channelId, channelName);
+            // Look for it in the cache
+            UserInfo userObj = null;
+            if (s_userNames.TryGetValue(userName.ToLower(), out userObj))
+            {
+                return userObj.Name;
+            }
+
+            // Try to get it
+            userObj = new UserInfo();
+            try
+            {
+                string res = await MakeMixerHttpRequest($"api/v1/channels/{userName}");
+                var api = JsonConvert.DeserializeObject<MixerChannelApi>(res);
+                userObj.ChannelId = api.id;
+                userObj.Name = api.token;
+                userObj.UserId = api.userId;
+            }
+            catch (Exception e)
+            {
+                Logger.Error($"Failed to get channel name from API: {userName}", e);
+                return null;
+            }
+
+            if (userObj.ChannelId == 0 || userObj.UserId == 0 || String.IsNullOrWhiteSpace(userObj.Name))
+            {
+                return null;
+            }
+
+            AddToMaps(userObj);
+
+            return userObj.Name;
         }
 
         public async static Task<int?> GetUserId(string userName)
         {
-            int userId = 0;
-            if(s_userNames.TryGetValue(userName, out userId))
+            // Look for it in the cache
+            UserInfo userObj = null;
+            if (s_userNames.TryGetValue(userName.ToLower(), out userObj))
             {
-                return userId;
+                return userObj.UserId;
             }
 
+            // Try to get it
+            userObj = new UserInfo();
             try
             {
                 string res = await MakeMixerHttpRequest($"api/v1/channels/{userName}");
-                userId = JsonConvert.DeserializeObject<MixerChannelApi>(res).userId;
+                var api = JsonConvert.DeserializeObject<MixerChannelApi>(res);
+                userObj.ChannelId = api.id;
+                userObj.Name = api.token;
+                userObj.UserId = api.userId;
             }
             catch (Exception e)
             {
-                Logger.Error($"Failed to get user id from API: {userName}", e);
+                Logger.Error($"Failed to get user id name from API: {userName}", e);
                 return null;
             }
 
-            if(userId <= 0)
+            if (userObj.ChannelId == 0 || userObj.UserId == 0 || String.IsNullOrWhiteSpace(userObj.Name))
             {
                 return null;
             }
 
-            s_userNames.TryAdd(userName, userId);
-            return userId;
+            AddToMaps(userObj);
+
+            return userObj.UserId;
         }
 
         public async static Task<string> GetUserName(int userId)
         {
-            string userName = null;
-            if (s_userIds.TryGetValue(userId, out userName))
+            // Look for it in the cache
+            UserInfo userObj = null;
+            if (s_userIds.TryGetValue(userId, out userObj))
             {
-                return userName;
+                return userObj.Name;
             }
 
+            // Try to get it
+            userObj = new UserInfo();
             try
             {
                 string res = await MakeMixerHttpRequest($"api/v1/users/{userId}");
-                userName = JsonConvert.DeserializeObject<MixerUserApi>(res).username;
+                var api = JsonConvert.DeserializeObject<MixerUserApi>(res);
+                userObj.ChannelId = api.channel.id;
+                userObj.Name = api.channel.token;
+                userObj.UserId = api.channel.userId;
             }
             catch (Exception e)
             {
@@ -122,13 +177,25 @@ namespace Carl
                 return null;
             }
 
-            if(String.IsNullOrWhiteSpace(userName))
+            if (userObj.ChannelId == 0 || userObj.UserId == 0 || String.IsNullOrWhiteSpace(userObj.Name))
             {
                 return null;
             }
 
-            s_userIds.TryAdd(userId, userName);
-            return userName;
+            AddToMaps(userObj);
+
+            return userObj.Name;
+        }
+
+        private static void AddToMaps(UserInfo info)
+        {
+            if (info == null || info.ChannelId == 0 || info.UserId == 0 || String.IsNullOrWhiteSpace(info.Name))
+            {
+                return;
+            }
+            s_channelIds.TryAdd(info.ChannelId, info);
+            s_userIds.TryAdd(info.UserId, info);
+            s_userNames.TryAdd(info.Name.ToLower(), info);
         }
 
         public async static Task<string> MakeMixerHttpRequest(string url, bool useCreds = true)

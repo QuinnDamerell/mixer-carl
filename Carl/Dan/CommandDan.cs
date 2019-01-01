@@ -188,7 +188,7 @@ namespace Carl.Dan
             string userName = CommandUtils.GetSingleWordArgument(msg.Text);
             if (userName == null)
             {
-                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, "I can globally whisper anyone on Mixer for you, they will get it no matter what channel they are watching. Give me a user name and the message you want to send.", true);
+                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, "I can globally whisper anyone on Mixer for you - they will get it no matter what channel they are watching. Give me a user name and the message you want to send.", true);
                 return;
             }
             string message = CommandUtils.GetStringAfterFirstTwoWords(msg.Text);

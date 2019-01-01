@@ -221,7 +221,6 @@ namespace Carl
                                     if (!m_channelProcessQueue.ContainsKey(ent.Value.Channel.Id))
                                     {
                                         m_channelProcessQueue.Add(ent.Value.Channel.Id, false);
-                                        MixerUtils.AddChannelMap(ent.Value.Channel.Id, ent.Value.Channel.Token);
                                     }
                                 }
                             }
