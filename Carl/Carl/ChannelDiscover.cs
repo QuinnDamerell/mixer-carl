@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 
@@ -23,6 +24,7 @@ namespace Carl
 
         const int m_threadSleepTimeMs = 15000;
         List<int> m_channelOverrides;
+        Thread m_updater;
 
         public ChannelDiscover(List<int> channelOverrides = null)
         {
@@ -31,6 +33,8 @@ namespace Carl
 
         public void Run()
         {
+            m_updater = new Thread(UpdateThread);
+            m_updater.Start();
             UpdateThread();
         }
 

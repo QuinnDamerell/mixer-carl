@@ -47,6 +47,8 @@ namespace Carl
         int m_chatBotUserId;
         string m_chatBotoAuthToken;
 
+        Thread m_masterWorker;
+
         public bool Run(string[] args)
         {
             CarlConfig config = CarlConfig.Get();
@@ -93,7 +95,8 @@ namespace Carl
 
             Logger.Info("Setting up work master");
             // Setup the work master
-            WorkMasterThread().ConfigureAwait(false);
+            m_masterWorker = new Thread(WorkMasterThread);
+            m_masterWorker.Start();
 
             Logger.Info("Setting up worker threads");
             // Setup the worker threads.
@@ -195,7 +198,7 @@ namespace Carl
             }
         }
 
-        private async Task WorkMasterThread()
+        private async void WorkMasterThread()
         {
             while (true)
             {
