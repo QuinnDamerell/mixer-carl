@@ -77,7 +77,8 @@ namespace Carl
                     {
                         Id = chanId,
                         Token = await MixerUtils.GetChannelName(chanId),
-                        ViewersCurrent = 300
+                        ViewersCurrent = 300,
+                        Online = true
                     });
                 }
                 return channels;

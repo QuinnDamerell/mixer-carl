@@ -3,22 +3,27 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Carl.Dan
+namespace Carl
 {
-    public class CreeperDan : Dan, IFirehoseUserActivityListener, IFirehoseChatConnectionChanged, IFirehoseCommandListener
+    public class CreeperCarl
     {
-        class UserActivtyEntry
+        class UserTime
         {
-            public Dictionary<int, DateTime> ActiveChannels;
+            public DateTime Joined;
+            public DateTime LastSeen;
         }
 
+        class UserActivtyEntry
+        {
+            public Dictionary<int, UserTime> ActiveChannels;
+        }
+
+        private static CreeperCarl s_instance;
         ConcurrentDictionary<int, UserActivtyEntry> m_userMap = new ConcurrentDictionary<int, UserActivtyEntry>();
-        private static CreeperDan s_instance;
+        ICarl m_carl;
         DateTime m_roundUpdateStartTime = DateTime.MaxValue;
         DateTime m_previousRoundUpdateStartTime = DateTime.Now;
         int m_currentViewerCount = 0;
@@ -27,15 +32,10 @@ namespace Carl.Dan
 
         Thread m_userChecker;
 
-        public CreeperDan(IFirehose firehose, ICarl userActivityCallback)
-            : base(firehose)
+        public CreeperCarl(ICarl carl)
         {
-            m_userActivityCallback = userActivityCallback;
-            m_firehose.SubChatConnectionChanged(this);
-            m_firehose.SubUserActivity(this);
-            m_firehose.SubCommandListener(this);
             s_instance = this;
-
+            m_carl = carl;
             m_userChecker = new Thread(ChannelUserCheckerThread);
             m_userChecker.IsBackground = false;
             m_userChecker.Start();
@@ -43,7 +43,7 @@ namespace Carl.Dan
 
         public static List<int> GetActiveChannelIds(int userId)
         {
-            if(s_instance != null)
+            if (s_instance != null)
             {
                 return s_instance.InternalGetActiveChannels(userId);
             }
@@ -52,20 +52,20 @@ namespace Carl.Dan
 
         public static int GetViewerCount()
         {
-            if(s_instance != null)
+            if (s_instance != null)
             {
                 return s_instance.m_currentViewerCount;
             }
             return 0;
         }
 
-        public async void OnCommand(string command, ChatMessage msg)
-        {
-            if(command.Equals("userstats"))
-            {
-                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I'm currently chatting with {m_currentViewerCount.ToString("n0", Carl.Culture)} viewers on {m_channelTracker.Count.ToString("n0", Carl.Culture)} mixer channels.", msg.IsWhisper);
-            }
-        }
+        //public async void OnCommand(string command, ChatMessage msg)
+        //{
+        //    if (command.Equals("userstats"))
+        //    {
+        //        await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I'm currently chatting with {m_currentViewerCount.ToString("n0", Carl.Culture)} viewers on {m_channelTracker.Count.ToString("n0", Carl.Culture)} mixer channels.", msg.IsWhisper);
+        //    }
+        //}
 
         private List<int> InternalGetActiveChannels(int userId)
         {
@@ -75,28 +75,12 @@ namespace Carl.Dan
             if (m_userMap.TryGetValue(userId, out entry))
             {
                 // The user exists, update the active list.
-                List<int> toRemove = new List<int>();
                 lock (entry.ActiveChannels)
                 {
-                    foreach(var pair in entry.ActiveChannels)
+                    foreach (var pair in entry.ActiveChannels)
                     {
-                        // Check if the users is older than the start of the previous round.
-                        // If that's true, the user isn't in the channel anymore.
-                        if ((pair.Value - m_previousRoundUpdateStartTime).TotalMinutes < 0)
-                        {
-                            toRemove.Add(pair.Key);
-                        }
-                        else
-                        {
-                            activeChannels.Add(pair.Key);
-                        }
-                    }             
-                }
-
-                // Clean up old channels.
-                foreach (int chan in toRemove)
-                {
-                    RemoveUserFromChannel(userId, chan, true);
+                        activeChannels.Add(pair.Key);
+                    }
                 }
                 return activeChannels.Count == 0 ? null : activeChannels;
             }
@@ -105,89 +89,110 @@ namespace Carl.Dan
 
         public void OnUserActivity(UserActivity activity)
         {
-            if(activity.IsFromCreeperDan)
+            if (activity.IsJoin)
             {
-                return;
-            }
-
-            if(activity.IsJoin)
-            {
-                // Make sure we know the user is in here.
-                AddOrUpdateUserToChannel(activity.UserId, activity.ChannelId, false);
+                AddOrUpdateUserToChannel(activity.UserId, activity.ChannelId);
             }
             else
             {
-                RemoveUserFromChannel(activity.UserId, activity.ChannelId, false);
+                RemoveUserFromChannel(activity.UserId, activity.ChannelId);
             }
         }
 
-        private void AddOrUpdateUserToChannel(int userId, int channelId, bool fireNotificaiton)
+        private void AddOrUpdateUserToChannel(int userId, int channelId)
         {
+            // Make sure the user has an entry.
             UserActivtyEntry entry = null;
-            while (true)
-            {                
-                if (m_userMap.TryGetValue(userId, out entry))
+            while (!m_userMap.TryGetValue(userId, out entry))
+            {
+                // Create a new entry for this user.
+                entry = new UserActivtyEntry()
                 {
-                    // The user exists, update the active list.
-                    lock (entry.ActiveChannels)
-                    {
-                        // Set or update the join time.
-                        entry.ActiveChannels[channelId] = DateTime.Now;
-                    }
-                    break;
+                    ActiveChannels = new Dictionary<int, UserTime>()
+                };
+
+                // Try to add the user to the map.
+                m_userMap.TryAdd(userId, entry);                
+            }
+
+            // Check if the user is already known to be watching or not.
+            bool fireNotification = false;
+            DateTime joined = DateTime.MinValue;
+            lock (entry.ActiveChannels)
+            {
+                UserTime time;
+                if (entry.ActiveChannels.TryGetValue(channelId, out time))
+                {
+                    // Update the last time we saw this 
+                    entry.ActiveChannels[channelId].LastSeen = DateTime.Now;
                 }
                 else
                 {
-                    // The user doesn't exist, add them into the map.
-                    entry = new UserActivtyEntry()
+                    // Create a new entry.
+                    joined = DateTime.Now;
+                    fireNotification = true;
+
+                    time = new UserTime()
                     {
-                        ActiveChannels = new Dictionary<int, DateTime>()
+                        Joined = joined,
+                        LastSeen = DateTime.Now
                     };
 
-                    // Set the current time as the join time.
-                    entry.ActiveChannels[channelId] = DateTime.Now;
-
-                    if (!m_userMap.TryAdd(userId, entry))
-                    {
-                        // Someone else already added it, try again.
-                        continue;
-                    }
-                    break;
+                    // Add it to the user's list
+                    entry.ActiveChannels.Add(channelId, time);
                 }
-            }
+            }         
 
-            if (fireNotificaiton)
+            // If we should fire a notification and we found a new user fire the event.
+            if (fireNotification)
             {
-                FireUserActivity(userId, channelId, true);
+                FireUserActivity(userId, channelId, true, joined);
             }
         }
 
-        private void RemoveUserFromChannel(int userId, int channelId, bool fireNotificaiton)
+        private void RemoveUserFromChannel(int userId, int channelId)
         {
             UserActivtyEntry entry = null;
+            DateTime joined = DateTime.MinValue;
+            bool fireNotification = false;
+
+            // Try to find the user in our map.
             if (m_userMap.TryGetValue(userId, out entry))
             {
                 // The users exists, remove this activity.
                 lock (entry.ActiveChannels)
                 {
-                    entry.ActiveChannels.Remove(channelId);
-                }                
+                    // Try to remove the value, if it exists it will succeeded.
+                    UserTime time;
+                    if (entry.ActiveChannels.Remove(channelId, out time))
+                    {
+                        // The user was here, clear them out now.
+                        fireNotification = true;
+                        joined = time.Joined;
+                    }
+
+                    // If the maps is now empty, remove the user from the user map
+                    if(entry.ActiveChannels.Count == 0)
+                    {
+                        m_userMap.TryRemove(userId, out entry);
+                    }
+                }
             }
 
-            if(fireNotificaiton)
+            if (fireNotification)
             {
-                FireUserActivity(userId, channelId, false);
+                FireUserActivity(userId, channelId, false, joined);
             }
         }
 
-        private void FireUserActivity(int userId, int channelId, bool isJoined)
+        private void FireUserActivity(int userId, int channelId, bool isJoined, DateTime joined)
         {
-            m_userActivityCallback.OnUserActivity(new UserActivity()
+            m_carl.OnAdvanceUserActivity(new AdvanceUserActivity()
             {
-                ChannelId  = channelId,
+                ChannelId = channelId,
                 UserId = userId,
-                IsFromCreeperDan = true,
-                IsJoin = isJoined
+                IsJoin = isJoined,
+                Joined = joined
             });
         }
 
@@ -201,7 +206,7 @@ namespace Carl.Dan
 
         public void OnChatConnectionChanged(int channelId, ChatConnectionState state)
         {
-            if(state == ChatConnectionState.Connected)
+            if (state == ChatConnectionState.Connected)
             {
                 m_channelTracker.TryAdd(channelId, 0);
             }
@@ -209,6 +214,12 @@ namespace Carl.Dan
             {
                 int temp;
                 m_channelTracker.TryRemove(channelId, out temp);
+
+                // We will try to remove this channel for all users, this will only do something for users that are watching.
+                foreach (var pair in m_userMap)
+                {
+                    RemoveUserFromChannel(pair.Key, channelId);
+                }
             }
         }
 
@@ -219,16 +230,16 @@ namespace Carl.Dan
             m_roundUpdateStartTime = DateTime.Now;
 
             int updateRound = 1;
-            while(true)
+            while (true)
             {
                 DateTime now = DateTime.Now;
                 try
                 {
                     // Try to find one channel that isn't updated yet.
                     bool udpatedChannel = false;
-                    foreach(var pair in m_channelTracker)
+                    foreach (var pair in m_channelTracker)
                     {
-                        if(pair.Value < updateRound)
+                        if (pair.Value < updateRound)
                         {
                             // Try to update the channel viewers.
                             if (await UpdateChannelViewerList(pair.Key))
@@ -244,13 +255,13 @@ namespace Carl.Dan
                     }
 
                     // Update in real time if we know it's higher.
-                    if(m_viewCountAccumlator > m_currentViewerCount)
+                    if (m_viewCountAccumlator > m_currentViewerCount)
                     {
                         m_currentViewerCount = m_viewCountAccumlator;
                     }
 
                     // If we didn't update a channel go to the next round.
-                    if(!udpatedChannel && m_channelTracker.Count != 0)
+                    if (!udpatedChannel && m_channelTracker.Count != 0)
                     {
                         // Dump the current viewer count
                         m_currentViewerCount = m_viewCountAccumlator;
@@ -271,10 +282,14 @@ namespace Carl.Dan
                         m_previousRoundUpdateStartTime = m_roundUpdateStartTime;
                         m_roundUpdateStartTime = DateTime.Now;
                         updateRound++;
+
+                        // Run a quick loop to remove any entires that aren't actually wathing anymore.
+                        RemoveOldEntries();
+
                         continue;
                     }
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     Logger.Error("Channel checker hit an exception while running.", e);
                 }
@@ -283,13 +298,42 @@ namespace Carl.Dan
             }
         }
 
+        private void RemoveOldEntries()
+        {
+            List<Tuple<int, int>> toRemove = new List<Tuple<int, int>>();
+            // For all users...
+            foreach(var pair in m_userMap)
+            {
+                lock(pair.Value.ActiveChannels)
+                {
+                    // For all of the channels they are watching.
+                    foreach(var innerPair in pair.Value.ActiveChannels)
+                    {
+                        // If the time we saw this entry was before the last round update, assume we missed the notification
+                        // and try to remove the channel from the user.
+                        if(innerPair.Value.LastSeen < m_previousRoundUpdateStartTime)
+                        {
+                            toRemove.Add(new Tuple<int, int>(pair.Key, innerPair.Key));
+                        }
+                    }
+                }
+            }
+
+            // Remove everything we found
+            foreach(var pair in toRemove)
+            {
+                Logger.Info($"Removing old entire {pair.Item1}-{pair.Item2}");
+                RemoveUserFromChannel(pair.Item1, pair.Item2);
+            }            
+        }
+
         private async Task<bool> UpdateChannelViewerList(int channelId)
         {
             List<int> viewers = await GetUserIdsWatchingChannel(channelId);
             m_viewCountAccumlator += viewers.Count;
             foreach (int viewer in viewers)
             {
-                AddOrUpdateUserToChannel(viewer, channelId, true);
+                AddOrUpdateUserToChannel(viewer, channelId);
             }
             return true;
         }
@@ -336,7 +380,7 @@ namespace Carl.Dan
                 pageCount++;
             }
             return knownUsers;
-        }  
+        }
 
         #endregion
     }

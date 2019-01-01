@@ -42,14 +42,8 @@ namespace Carl.Dan
             s_instance = this;
         }
 
-        public async void OnUserActivity(UserActivity activity)
+        public async void OnUserActivity(AdvanceUserActivity activity)
         {
-            // Ignore if creeper dan is letting us know. (it's from the mixer api)
-            if(activity.IsFromCreeperDan)
-            {
-                return;
-            }
-
             // Only look at joins.
             if(!activity.IsJoin)
             {
@@ -122,7 +116,7 @@ namespace Carl.Dan
                     output += "; ";
                 }
 
-                List<int> channelIds = CreeperDan.GetActiveChannelIds(friendUserid);
+                List<int> channelIds = CreeperCarl.GetActiveChannelIds(friendUserid);
                 if(channelIds != null && channelIds.Count > 0)
                 {
                     foundSomeone = true;

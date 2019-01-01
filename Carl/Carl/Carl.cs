@@ -23,6 +23,9 @@ namespace Carl
         // Called by the chat connectors when a user has joined a channel.        
         void OnUserActivity(UserActivity activity);
 
+        // Called by creeper carl when there's user activity.
+        void OnAdvanceUserActivity(AdvanceUserActivity activity);
+
         // Called by the command Dan when there's a command to handle.
         void OnCommand(string command, ChatMessage msg);
 
@@ -41,7 +44,9 @@ namespace Carl
         int m_workerLimit = 5;
         int m_workMasterTimeMs = 2000;
 
-        List<int> m_channelOverrides = null;//= new List<int>(){ 153416 };
+        CreeperCarl m_creeperCarl;
+
+        List<int> m_channelOverrides = new List<int>(){ 153416 };
         DateTime? m_lastChannelUpdateTime;
 
         int m_chatBotUserId;
@@ -112,6 +117,10 @@ namespace Carl
                 t.Start();
                 m_workers.Add(t);
             }
+
+            // Create our creeper.
+            m_creeperCarl = new CreeperCarl(this);
+
             Logger.Info("Running!");
             return true;
         }
@@ -248,7 +257,7 @@ namespace Carl
                     }
                 }
 
-                Logger.Info($"{connectedChannels}/{eligibleChannels} ({(eligibleChannels == 0 ? 0 : Math.Round(((double)connectedChannels / (double)eligibleChannels)*100, 2))}%) connected channels; tracking {CreeperDan.GetViewerCount().ToString("n0", Culture)} viewers. Work time was: {(DateTime.Now - workStart).TotalMilliseconds}ms");
+                Logger.Info($"{connectedChannels}/{eligibleChannels} ({(eligibleChannels == 0 ? 0 : Math.Round(((double)connectedChannels / (double)eligibleChannels)*100, 2))}%) connected channels; tracking {CreeperCarl.GetViewerCount().ToString("n0", Culture)} viewers. Work time was: {(DateTime.Now - workStart).TotalMilliseconds}ms");
 
                 foreach (int id in toRemove)
                 {
@@ -405,6 +414,14 @@ namespace Carl
 
         void ICarl.OnUserActivity(UserActivity activity)
         {
+            // Send user activity to creeper carl.
+            // Carl will correctly fire the notifications and augment ones that
+            // we miss from the websocket.
+            m_creeperCarl.OnUserActivity(activity);     
+        }
+
+        void ICarl.OnAdvanceUserActivity(AdvanceUserActivity activity)
+        {
             foreach (Firehose h in m_firehoses)
             {
                 h.PubUserActivity(activity);
@@ -413,6 +430,10 @@ namespace Carl
 
         void OnChatConnectionChanged(int channelId, ChatConnectionState state)
         {
+            // Inform creeper carl when chat connections change.
+            m_creeperCarl.OnChatConnectionChanged(channelId, state);
+
+            // Now inform the firehoses.
             foreach (Firehose h in m_firehoses)
             {
                 h.PublishChatConnectionChanged(channelId, state);

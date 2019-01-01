@@ -29,7 +29,7 @@ namespace Carl.Dan
 
         static public async Task<int> GlobalWhisper(IFirehose firehose, int userId, string userName, string message)
         {
-            List<int> channelIds = CreeperDan.GetActiveChannelIds(userId);
+            List<int> channelIds = CreeperCarl.GetActiveChannelIds(userId);
             if (channelIds == null)
             {
                 return 0;

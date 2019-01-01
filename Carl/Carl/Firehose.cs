@@ -97,7 +97,7 @@ namespace Carl
         IFirehoseUserActivityListener m_activityListener = null;
         int m_userActivityChannelFilter = -1;
 
-        public void PubUserActivity(UserActivity activity)
+        public void PubUserActivity(AdvanceUserActivity activity)
         {
             IFirehoseUserActivityListener l = m_activityListener;
             if (l != null)

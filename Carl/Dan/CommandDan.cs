@@ -165,7 +165,7 @@ namespace Carl.Dan
             }
 
             // Find the user.
-            List<int> channelIds = CreeperDan.GetActiveChannelIds(userId.Value);
+            List<int> channelIds = CreeperCarl.GetActiveChannelIds(userId.Value);
             if (channelIds == null)
             {
                 await CommandUtils.SendCantFindUser(m_firehose, msg, userName);

@@ -20,7 +20,14 @@ namespace Carl
         public int UserId;
         public bool IsJoin;
         public int ChannelId; // For co-streams this tells you which they joined.
-        public bool IsFromCreeperDan = false;
+    }
+
+    public class AdvanceUserActivity
+    {
+        public int UserId;
+        public bool IsJoin;
+        public int ChannelId; // For co-streams this tells you which they joined.
+        public DateTime Joined;
     }
 
     public enum ChatConnectionState
@@ -41,7 +48,7 @@ namespace Carl
 
     public interface IFirehoseUserActivityListener
     {
-        void OnUserActivity(UserActivity activity);
+        void OnUserActivity(AdvanceUserActivity activity);
     }
 
     public interface IFirehoseChatConnectionChanged

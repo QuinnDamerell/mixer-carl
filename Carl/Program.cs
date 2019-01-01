@@ -30,11 +30,6 @@ namespace Carl
             c.SubFirehose(hose);
             CommandDan dan = new CommandDan(c, hose);
 
-            // Set up the Creeper Dan
-            hose = new Firehose(c);
-            c.SubFirehose(hose);
-            CreeperDan creeperDan = new CreeperDan(hose, c);
-
             // Setup message Dan
             hose = new Firehose(c);
             c.SubFirehose(hose);
