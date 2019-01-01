@@ -98,7 +98,7 @@ namespace Carl
                     channels.AddRange(chan);
 
                     // If we hit the end of the list of channels with viewers, return.
-                    if(chan.Count != 0 && chan[0].ViewersCurrent == 0)
+                    if(chan.Count != 0)
                     {
                         break;
                     }

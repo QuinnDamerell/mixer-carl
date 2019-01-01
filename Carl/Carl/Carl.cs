@@ -84,6 +84,8 @@ namespace Carl
                 }
             }
 
+            Logger.Info($"Starting! Viewer Count Limit:{m_viewerCountLimit}.");
+
             // Set the oauth token
             MixerUtils.SetMixerCreds(m_chatBotoAuthToken);
 
