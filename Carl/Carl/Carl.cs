@@ -38,7 +38,7 @@ namespace Carl
         public static CultureInfo Culture = new CultureInfo("en-US");
 
         int m_viewerCountLimit = 4;   // The number of viewers a channel must have (inclusive) to be picked up.
-        int m_workerLimit = 2;
+        int m_workerLimit = 5;
         int m_workMasterTimeMs = 2000;
 
         List<int> m_channelOverrides = null;//= new List<int>(){ 153416 };
