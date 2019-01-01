@@ -16,7 +16,7 @@ namespace Carl.Dan
     public class HistoricAccumulator<T>
     {
         // DecayValue = CurrentValue ^ DecayFactor.
-        public double DecayFactor = 0.98;
+        public double DecayFactor = 0.97;
 
         ConcurrentDictionary<T, int> m_dict = new ConcurrentDictionary<T, int>();
         ConcurrentDictionary<T, bool> m_commonDict = null;
