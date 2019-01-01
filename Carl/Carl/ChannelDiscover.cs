@@ -117,6 +117,9 @@ namespace Carl
                     {
                         break;
                     }
+
+                    // Sleep a little so we don't hit the API too hard.
+                    await Task.Delay(10);
                 }
                 catch (Exception e)
                 {
