@@ -160,12 +160,12 @@ namespace Carl.Dan
 
         public static async Task<bool> SendCantFindUser(IFirehose m_firehose, ChatMessage msg, string failedToFindUserName)
         {
-            return await SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"It doesn't look like {failedToFindUserName} is active on Mixer right now. (Maybe they're lurking?)", msg.IsWhisper);
+            return await SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"It doesn't look like {await MixerUtils.GetProperUserName(failedToFindUserName)} is active on Mixer right now. (Maybe they're lurking?)", msg.IsWhisper);
         }
 
-        public static async Task<bool> SendMixerUserNotFound(IFirehose m_firehose, ChatMessage msg, string failedToFindUserName)
+        public static async Task<bool> SendMixerUserNotFound(IFirehose m_firehose, ChatMessage msg, string failedToFindUserName, bool isChannel = false)
         {
-            return await SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I can't find a user named {failedToFindUserName} on Mixer. Is that spelled correctly? 😕", msg.IsWhisper);
+            return await SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I can't find a {(isChannel ? "channel" : "user")} named {await MixerUtils.GetProperUserName(failedToFindUserName)} on Mixer. Is that spelled correctly? 😕", msg.IsWhisper);
         }
 
         public static async Task<bool> CheckForMutualFriendsAndMessageIfNot(IFirehose m_firehose, ChatMessage msg, int actionReceiverId, string action)

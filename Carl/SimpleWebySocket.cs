@@ -44,6 +44,9 @@ namespace Carl
         BlockingCollection<SendQueueItem> m_sendQueue = new BlockingCollection<SendQueueItem>();
         private CancellationTokenSource m_cancelToken = new CancellationTokenSource();
 
+        Thread m_sendThread;
+        Thread m_recvThread;
+
         public SimpleWebySocketState m_state;
         public SimpleWebySocketState State
         {
@@ -90,8 +93,12 @@ namespace Carl
                 UpdateState(SimpleWebySocketState.Connected);
 
                 // Start the worker threads
-                var _ignored = Task.Run(() => ReceiveThread()).ConfigureAwait(false);
-                var __ignored = Task.Run(() => SendThread()).ConfigureAwait(false);
+                m_sendThread = new Thread(SendThread);
+                m_sendThread.Start();
+                m_recvThread = new Thread(ReceiveThread);
+                m_recvThread.Start();
+                //var _ignored = Task.Run(() => ReceiveThread()).ConfigureAwait(false);
+                //var __ignored = Task.Run(() => SendThread()).ConfigureAwait(false);
                 
                 return true;
             }

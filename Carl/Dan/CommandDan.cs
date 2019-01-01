@@ -177,7 +177,7 @@ namespace Carl.Dan
                 var _ignored = Task.Run(async () => 
                 {
                     // Build the string.
-                    string output = $"I found {userName} in the following channels: " + await CommandUtils.FormatChannelIds(channelIds, 250) + ".";
+                    string output = $"I found {await MixerUtils.GetProperUserName(userName)} in the following channels: " + await CommandUtils.FormatChannelIds(channelIds, 250) + ".";
                     await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, output, CommandUtils.ShouldForceIsWhisper(msg));
                 }).ConfigureAwait(false);
             }
@@ -205,7 +205,7 @@ namespace Carl.Dan
             }
             else
             {
-                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I sent your message to {userName} in {whispers} channels", true);
+                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I sent your message to {await MixerUtils.GetProperUserName(userName)} in {whispers} channels", true);
             }
         }
 
@@ -243,7 +243,7 @@ namespace Carl.Dan
             int? userId = await MixerUtils.GetUserId(userName);
             if (!userId.HasValue || userName.Length == 0)
             {
-                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"Mock '{userName}' not found on mixer.", msg.IsWhisper);
+                await CommandUtils.SendMixerUserNotFound(m_firehose, msg, userName);
                 return;
             }
 
@@ -275,11 +275,11 @@ namespace Carl.Dan
             string output;
             if (removed)
             {
-                output = $"I'm no longer mocking {userName}. Lucky them.";
+                output = $"I'm no longer mocking {await MixerUtils.GetProperUserName(userName)}. Lucky them.";
             }
             else
             {
-                output = $"I'm now {(currentValue ? "privately" : "publically")} mocking {userName} 😮";
+                output = $"I'm now {(currentValue ? "privately" : "publically")} mocking {await MixerUtils.GetProperUserName(userName)} 😮";
             }
             await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, output, msg.IsWhisper);
             return;
@@ -317,7 +317,7 @@ namespace Carl.Dan
             string channelName = await MixerUtils.GetChannelName(msg.ChannelId);
             if (channelName == null)
             {
-                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"Well that's not right, I had trouble finding the channel. Try again later.", msg.IsWhisper);
+                await CommandUtils.SendMixerUserNotFound(m_firehose, msg, summonUserName, true);
                 return;
             }
 
@@ -350,16 +350,17 @@ namespace Carl.Dan
             //}
             //else
             //{
-                // The user doesn't have the extension! Whisper them.
-                int whispers = await CommandUtils.GlobalWhisper(m_firehose, summonUserName, $"{msg.UserName} summons you to @{channelName}'s channel! https://mixer.com/{channelName}");
-                if (whispers == 0)
-                {
-                    await CommandUtils.SendCantFindUser(m_firehose, msg, summonUserName);
-                }
-                else
-                {
-                    await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I summoned {await MixerUtils.GetUserName(actionReceiverId.Value)} in {whispers} channel{(whispers > 1 ? "s" : "")}.", msg.IsWhisper);
-                }
+            // The user doesn't have the extension! Whisper them.
+            string properChannelName = await MixerUtils.GetProperUserName(channelName);
+            int whispers = await CommandUtils.GlobalWhisper(m_firehose, summonUserName, $"{msg.UserName} summons you to @{properChannelName}'s channel! https://mixer.com/{properChannelName}");
+            if (whispers == 0)
+            {
+                await CommandUtils.SendCantFindUser(m_firehose, msg, summonUserName);
+            }
+            else
+            {
+                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I summoned {await MixerUtils.GetUserName(actionReceiverId.Value)} in {whispers} channel{(whispers > 1 ? "s" : "")}.", msg.IsWhisper);
+            }
             //}
         }
 
