@@ -81,6 +81,8 @@ namespace Carl
             }
             UpdateStatus(ChatState.Connecting);
 
+            Logger.Info($"Connecting to chat... {m_channelId}");
+
             // Connect without auth
             if(await ConnectInternal(false))
             {
@@ -94,6 +96,8 @@ namespace Carl
         private async Task<bool> ConnectInternal(bool withCreds)
         {
             // Get the details.
+            Logger.Info($"Connecting to chat internal... {m_channelId}");
+
             ChatServerDetails details = await GetChatServerDetails(withCreds);
             if (details == null)
             {

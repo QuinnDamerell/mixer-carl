@@ -224,6 +224,7 @@ namespace Carl.Dan
                 DateTime now = DateTime.Now;
                 try
                 {
+                    // Try to find one channel that isn't updated yet.
                     bool udpatedChannel = false;
                     foreach(var pair in m_channelTracker)
                     {
