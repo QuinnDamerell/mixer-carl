@@ -91,7 +91,7 @@ namespace Carl
 
             Logger.Info("Setting up discovery");
             // Start the discovery process.
-            ChannelDiscover dis = new ChannelDiscover(m_channelOverrides);
+            ChannelDiscover dis = new ChannelDiscover(m_viewerCountLimit, m_channelOverrides);
             dis.OnChannelOnlineUpdate += OnChannelOnlineUpdate;
             dis.Run();
 

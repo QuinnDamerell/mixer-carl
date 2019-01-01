@@ -24,12 +24,14 @@ namespace Carl
         public event ChannelOnlineUpdate OnChannelOnlineUpdate;
 
         const int m_threadSleepTimeMs = 15000;
+        int m_viwersInclusiveLimit;
         List<int> m_channelOverrides;
         Thread m_updater;
 
-        public ChannelDiscover(List<int> channelOverrides = null)
+        public ChannelDiscover(int viewerInclusiveLimit, List<int> channelOverrides = null)
         {
             m_channelOverrides = channelOverrides;
+            m_viwersInclusiveLimit = viewerInclusiveLimit;
         }
 
         public void Run()
@@ -104,10 +106,15 @@ namespace Carl
                         break;
                     }
 
+                    // Check if we are on channels that are under our viewer limit
+                    if(chan[0].ViewersCurrent < m_viwersInclusiveLimit)
+                    {
+                        break;
+                    }
+
                     // Check if we hit the end of online channels.
                     if (!chan[0].Online)
                     {
-                        Logger.Info($"stopping becase offine found round{i} {chan[0]}");
                         break;
                     }
                 }
