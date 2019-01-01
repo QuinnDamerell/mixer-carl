@@ -81,8 +81,6 @@ namespace Carl
             }
             UpdateStatus(ChatState.Connecting);
 
-            Logger.Info($"Connecting to chat... {m_channelId}");
-
             // Connect without auth
             if(await ConnectInternal(false))
             {
@@ -96,8 +94,6 @@ namespace Carl
         private async Task<bool> ConnectInternal(bool withCreds)
         {
             // Get the details.
-            Logger.Info($"Connecting to chat internal... {m_channelId}");
-
             ChatServerDetails details = await GetChatServerDetails(withCreds);
             if (details == null)
             {
@@ -163,6 +159,8 @@ namespace Carl
             await m_ws.Disconnect();
             m_ws = null;
 
+            Logger.Info($"Reconnecting to channel {m_channelId} WITH AUTH.");
+
             // Connect with auth
             if (!(await ConnectInternal(true)))
             {
@@ -187,8 +185,9 @@ namespace Carl
             await m_ws.Disconnect();
             m_ws = null;
 
+            Logger.Info($"Reconnecting to channel {m_channelId} WITHOUT AUTH.");
+
             // Connect with auth
-            Logger.Info($"Connecting without auth... {m_channelId}");
             if (!(await ConnectInternal(false)))
             {
                 // If we fail, fire disconnected.
@@ -405,7 +404,7 @@ namespace Carl
             }
 
             // Check to see if we should unauth
-            if(DateTime.Now - m_lastSendTime > c_maxTimeBetweenSendsKeepAuthed)
+            if(m_state == ChatState.ConnectedWithAuth && DateTime.Now - m_lastSendTime > c_maxTimeBetweenSendsKeepAuthed)
             {
                 Task.Run(() =>
                 {
