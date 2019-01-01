@@ -96,12 +96,6 @@ namespace Carl
                     string response = await MixerUtils.MakeMixerHttpRequest($"api/v1/channels?limit=100&page={i}&order=online:desc,viewersCurrent:desc&fields=token,id,viewersCurrent");
                     List<MixerChannel> chan = JsonConvert.DeserializeObject<List<MixerChannel>>(response);
                     channels.AddRange(chan);
-
-                    // If we hit the end of the list of channels with viewers, return.
-                    if(chan.Count != 0)
-                    {
-                        break;
-                    }
                 }
                 catch (Exception e)
                 {
