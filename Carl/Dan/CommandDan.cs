@@ -53,15 +53,14 @@ namespace Carl.Dan
                 // See if we can handle it internally.
                 if (command.Equals("help") || command.Equals("command") || command.Equals("commands"))
                 {
-                    string response;
-                    if(CommandUtils.HasAdvancePermissions(msg.UserId))
+                    string response = $"Hello @{msg.UserName}! You can talk to me in any Mixer channel by entering '^<command>' or whispering a command. Commands: ";
+                    if (CommandUtils.HasAdvancePermissions(msg.UserId))
                     {
-                        response = $"Hello @{msg.UserName}! You can talk to me in any Mixer channel by typing '^<command>' or by whispering me a command. Commands: hello, whisper, summon, find, echo, friend, lurk, mock, pmock, cmock, userstats, msgstats, exit, about";
+                        response += $"hello, whisper, summon, find, friend, lurk, ping, echo, mock, pmock, cmock, userstats, msgstats, exit, about";
                     }
                     else
                     {
-                        response = $"Hello @{msg.UserName}! You can talk to me in any Mixer channel by typing '^<command>' or by whispering me a command. Commands: hello, whisper, summon, find, echo, friend, lurk, userstats, msgstats, about";
-
+                        response = $"hello, whisper, summon, find, friend, lurk, userstats, msgstats, about";
                     }
                     await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, response, CommandUtils.ShouldForceIsWhisper(msg));
                 }
