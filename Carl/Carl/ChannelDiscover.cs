@@ -101,6 +101,7 @@ namespace Carl
                     //If we hit the end of the list of channels that are online, return.
                     if (chan.Count != 0 && !chan[0].Online)
                     {
+                        Logger.Info($"stopping becase offine found round{i} {chan[0]}");
                         break;
                     }
                 }
