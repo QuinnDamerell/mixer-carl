@@ -18,7 +18,7 @@ namespace Carl.Dan
         // DecayValue = CurrentValue ^ DecayFactor.
         public double DecayFactor = 0.985;
 
-        ConcurrentDictionary<T, int> m_dict = new ConcurrentDictionary<T, int>();
+        ConcurrentDictionary<T, double> m_dict = new ConcurrentDictionary<T, double>();
         ConcurrentDictionary<T, bool> m_commonDict = null;
         IHistoricAccumulatorInsertPreparer<T> m_insertPrep = null;
 
@@ -73,7 +73,7 @@ namespace Carl.Dan
             {
                 attempts++;
 
-                int currentValue = 0;
+                double currentValue = 0;
                 if (m_dict.TryGetValue(value, out currentValue))
                 {
                     if(m_dict.TryUpdate(value, currentValue + 1, currentValue))
@@ -97,15 +97,15 @@ namespace Carl.Dan
             // Decay the word map.
             foreach (var pair in m_dict)
             {
-                int newValue = pair.Value;
+                double newValue = pair.Value;
                 for (int gen = 0; gen < decayGenerations; gen++)
                 {
-                    newValue = (int)Math.Round((Math.Pow(pair.Value, DecayFactor))) - 1;
+                    newValue = Math.Round((Math.Pow(pair.Value, DecayFactor))) - 1.0;
                 }
 
                 if (newValue <= 0)
                 {
-                    int tmp;
+                    double tmp;
                     m_dict.TryRemove(pair.Key, out tmp);
                 }
                 else
@@ -116,10 +116,10 @@ namespace Carl.Dan
         }
 
         // Returns the current top values in the history.
-        public List<Tuple<T, int>> GetTopValues(int listCount)
+        public List<Tuple<T, double>> GetTopValues(int listCount)
         {
             // Build the top words
-            List<Tuple<T, int>> topValues = new List<Tuple<T, int>>();
+            List<Tuple<T, double>> topValues = new List<Tuple<T, double>>();
 
             // For each of the values we currently have...
             foreach (var pair in m_dict)
@@ -144,7 +144,7 @@ namespace Carl.Dan
                 if (shouldBeAdded)
                 {
                     pos++;
-                    topValues.Insert(pos, new Tuple<T, int>(pair.Key, pair.Value));
+                    topValues.Insert(pos, new Tuple<T, double>(pair.Key, pair.Value));
 
                     // If the list is too long, drop the lowest rank value.
                     if (topValues.Count > listCount)
@@ -156,7 +156,7 @@ namespace Carl.Dan
                 // If the returned list isn't long enough, add this to it.
                 if (topValues.Count < listCount)
                 {
-                    topValues.Add(new Tuple<T, int>(pair.Key, pair.Value));
+                    topValues.Add(new Tuple<T, double>(pair.Key, pair.Value));
                 }
             }
 
