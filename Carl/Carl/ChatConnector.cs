@@ -164,7 +164,7 @@ namespace Carl
             m_ws = null;
 
             // Connect with auth
-            if(!(await ConnectInternal(true)))
+            if (!(await ConnectInternal(true)))
             {
                 // If we fail, fire disconnected.
                 await Disconnect();
@@ -188,6 +188,7 @@ namespace Carl
             m_ws = null;
 
             // Connect with auth
+            Logger.Info($"Connecting without auth... {m_channelId}");
             if (!(await ConnectInternal(false)))
             {
                 // If we fail, fire disconnected.
