@@ -307,10 +307,6 @@ namespace Carl
 
             // Cancel anything that's not dead.
             m_cancelToken.Cancel();
-
-            // Make sure the threds stop.
-            m_sendThread.Abort();
-            m_recvThread.Abort();
         }
     }
 }
