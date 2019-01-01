@@ -63,7 +63,7 @@ namespace Carl.Dan
         {
             if(command.Equals("userstats"))
             {
-                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I'm currently seeing {m_currentViewerCount.ToString("n0", Carl.Culture)} viewers on {m_channelTracker.Count.ToString("n0", Carl.Culture)} channels.", msg.IsWhisper);
+                await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"I'm currently chatting with {m_currentViewerCount.ToString("n0", Carl.Culture)} viewers on {m_channelTracker.Count.ToString("n0", Carl.Culture)} mixer channels.", msg.IsWhisper);
             }
         }
 
