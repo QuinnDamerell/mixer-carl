@@ -268,7 +268,7 @@ namespace Carl.Dan
             // Add the friend to their list
             bool addedToFriends = UpdateList(msg.UserId, friendUserId.Value, add, true);
             bool addedToFollowers = UpdateList(friendUserId.Value, msg.UserId, add, false);
-            await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"You're {(add ? (!addedToFriends && !addedToFollowers ? "still" : "now") : "no longer")} friends with @{MixerUtils.GetProperUserName(friendUserName)}{(add ? "! ❤️" : ". 💔")}", true);
+            await CommandUtils.SendResponse(m_firehose, msg.ChannelId, msg.UserName, $"You're {(add ? (!addedToFriends && !addedToFollowers ? "still" : "now") : "no longer")} friends with @{await MixerUtils.GetProperUserName(friendUserName)}{(add ? "! ❤️" : ". 💔")}", true);
             SaveSettings();
         }
 
