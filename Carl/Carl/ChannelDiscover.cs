@@ -98,8 +98,14 @@ namespace Carl
                     List<MixerChannel> chan = JsonConvert.DeserializeObject<List<MixerChannel>>(response);
                     channels.AddRange(chan);
 
-                    //If we hit the end of the list of channels that are online, return.
-                    if (chan.Count != 0 && !chan[0].Online)
+                    // Check if we hit the end.
+                    if(chan.Count == 0)
+                    {
+                        break;
+                    }
+
+                    // Check if we hit the end of online channels.
+                    if (!chan[0].Online)
                     {
                         Logger.Info($"stopping becase offine found round{i} {chan[0]}");
                         break;
