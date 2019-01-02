@@ -46,7 +46,7 @@ namespace Carl
 
         CreeperCarl m_creeperCarl;
 
-        List<int> m_channelOverrides = new List<int>(){ 153416 };
+        List<int> m_channelOverrides = null;//= new List<int>(){ 153416 };
         DateTime? m_lastChannelUpdateTime;
 
         int m_chatBotUserId;

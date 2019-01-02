@@ -322,7 +322,6 @@ namespace Carl
             // Remove everything we found
             foreach(var pair in toRemove)
             {
-                Logger.Info($"Removing old entire {pair.Item1}-{pair.Item2}");
                 RemoveUserFromChannel(pair.Item1, pair.Item2);
             }            
         }
