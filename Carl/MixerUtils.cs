@@ -216,7 +216,7 @@ namespace Carl
                 if (response.StatusCode == (HttpStatusCode)429)
                 {
                     // If we get rate limited wait for a while.
-                    int backoffMs = 300 * (int)Math.Pow(rateLimitBackoff, 2);
+                    int backoffMs = 500 * (int)Math.Pow(rateLimitBackoff, 2);
                     Logger.Info($"URL backing off for {backoffMs}ms, URL:{url}");
                     rateLimitBackoff++;
                     await Task.Delay(backoffMs);
